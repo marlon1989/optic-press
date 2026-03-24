@@ -159,7 +159,10 @@ class OpticUI {
    * @param {number} totalCount
    */
   showActive(totalCount) {
-    if (this.activeSection) this.activeSection.classList.remove('hidden');
+    if (this.activeSection) {
+      this.activeSection.classList.remove('hidden');
+      this.activeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     if (this.countText) this.countText.textContent = `Processing ${totalCount} images...`;
 
     if (!this.globalProgressEl && this.jobsList) {
@@ -231,6 +234,7 @@ class OpticUI {
   showCompleted(totalSavedPct, savedMB, totalOptimizedMB, processedCount) {
     if (this.completedSection) {
       this.completedSection.classList.remove('hidden');
+      this.completedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       if (this.completedStatsText) {
         this.completedStatsText.textContent = `You saved ${totalSavedPct}% of space! (${savedMB} MB total)`;
       }
