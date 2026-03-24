@@ -33,4 +33,5 @@ yarn-error.log*
 # Documentation (Manual management)
 # Plano_de_Aula_OpticPress.md - keeping this out for now as requested originally
 /Plano_de_Aula_OpticPress.md
+/AGENT.md
 ui_ux_output.md
