@@ -467,8 +467,15 @@ class OpticFileQueue {
     const totalToProcess = this.queue.length;
     this.ui.showActive(totalToProcess);
     
-    // Optic Web Worker Pool Initialization
-    const poolSize = Math.max(2, navigator.hardwareConcurrency || 4);
+    // Optic Web Worker Pool Initialization (Adaptive Scaling)
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const lowMemory = (navigator['deviceMemory'] && navigator['deviceMemory'] < 4);
+    
+    // Elena's Rigor: Cap concurrency on mobile/low-memory to prevent browser crash (OOM)
+    const poolSize = (isMobile || lowMemory) 
+        ? Math.min(2, navigator.hardwareConcurrency || 2)
+        : Math.max(2, navigator.hardwareConcurrency || 4);
+
     const workers = [];
     for(let i=0; i<poolSize; i++){
       workers.push(new Worker(this.workerUrl));
@@ -477,6 +484,9 @@ class OpticFileQueue {
     let processedCount = 0;
     let nextIndex = 0;
     const startTime = performance.now();
+
+    // Elena's Rigor: Adaptive Yield duration based on device profile
+    const yieldMs = (isMobile || lowMemory) ? 40 : 10;
 
     // The Worker Dispatcher
     /** @param {Worker} worker */
@@ -523,10 +533,10 @@ class OpticFileQueue {
             this.ui.updateProgress(processedCount, totalToProcess, speedInfo);
 
             // Yield to Main Thread (OOM Prevention)
-            // Giving the event loop a few milliseconds allows V8's Garbage Collector
+            // Giving the event loop milliseconds allows V8's Garbage Collector
             // to purge the detached Blobs and ArrayBuffers from RAM.
             if (processedCount % (poolSize * 2) === 0) {
-               await new Promise(r => setTimeout(r, 10));
+               await new Promise(r => setTimeout(r, yieldMs));
             }
 
             processNext(worker).then(resolve);
@@ -632,7 +642,9 @@ class OpticExporter {
     }
 
     // ── Chunked ZIP to avoid ArrayBuffer OOM on large batches ────────
-    const MAX_CHUNK_BYTES = 800 * 1024 * 1024; // 800 MB per ZIP (Sweet spot for browser RAM)
+    // Elena's Rigor: Dynamic chunk size (200MB on mobile vs 800MB on desktop)
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const MAX_CHUNK_BYTES = (isMobile ? 200 : 800) * 1024 * 1024; 
     const folderName = this.sourceQueue.zipFolderName || 'photos';
 
     // Split files into chunks by cumulative blob size
