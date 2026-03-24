@@ -1,8 +1,7 @@
-import '../src/input.css';
-import './init-theme.js';
-import './theme.js';
-import './components.js';
-import './compressor.js';
+import '../styles/input.css';
+import './ui/theme.js';
+import './ui/components.js';
+import './core/compressor.js';
 import { injectSpeedInsights } from "@vercel/speed-insights";
 import { inject } from "@vercel/analytics";
 

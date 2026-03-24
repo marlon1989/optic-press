@@ -469,7 +469,8 @@ class OpticFileQueue {
     
     // Optic Web Worker Pool Initialization (Adaptive Scaling)
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const lowMemory = (navigator['deviceMemory'] && navigator['deviceMemory'] < 4);
+    // @ts-ignore - deviceMemory is non-standard but stable in Chromium
+    const lowMemory = (navigator.deviceMemory && navigator.deviceMemory < 4);
     
     // Elena's Rigor: Cap concurrency on mobile/low-memory to prevent browser crash (OOM)
     const poolSize = (isMobile || lowMemory) 
@@ -590,7 +591,7 @@ const uploader = new OpticFileQueue({
   ui: uiManager,
   showToast: typeof showToast === 'function' ? showToast : undefined,
   db: db,
-  workerUrl: new URL('./worker.js', import.meta.url)
+  workerUrl: new URL('../workers/worker.js', import.meta.url)
 });
 
 // ── Progress Bar Animation (Fake) Removed for Scale ────────────
