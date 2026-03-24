@@ -471,7 +471,7 @@ class OpticFileQueue {
     const poolSize = Math.max(2, navigator.hardwareConcurrency || 4);
     const workers = [];
     for(let i=0; i<poolSize; i++){
-      workers.push(new Worker(this.workerUrl, { type: 'module' }));
+      workers.push(new Worker(this.workerUrl));
     }
 
     let processedCount = 0;
