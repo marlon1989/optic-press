@@ -285,6 +285,14 @@ class OpticFileQueue {
     /** @type {number} */
     this.totalOptimizedBytes = 0;
 
+    // Reactive Pressure Sensing (RPS) State
+    /** @type {number} */
+    this.baselineLatency = 0;
+    /** @type {number[]} */
+    this.latencyHistory = [];
+    /** @type {number} */
+    this.BATCH_WARMUP = 10;
+
     if (this.dropZone && this.fileInput) {
       this.bindEvents();
     }
@@ -489,9 +497,9 @@ class OpticFileQueue {
     let processedCount = 0;
     let nextIndex = 0;
     const startTime = performance.now();
-
-    // Elena's Rigor: Adaptive Yield duration based on device profile
-    const yieldMs = (isMobile || lowMemory) ? 40 : 10;
+    // Elena's Rigor: Adaptive Yield duration (Initial heuristic)
+    let yieldMs = (isMobile || lowMemory) ? 40 : 10;
+    const baseYield = yieldMs;
 
     // The Worker Dispatcher
     /** @param {Worker} worker */
@@ -505,6 +513,7 @@ class OpticFileQueue {
         
         const fileIndex = nextIndex++;
         const file = this.queue[fileIndex];
+        const jobStartTime = performance.now();
         
         worker.onmessage = async (/** @type {MessageEvent} */ e) => {
             const { success, blob, finalSize, savingsPct, filename, error } = e.data;
@@ -537,9 +546,30 @@ class OpticFileQueue {
             // Sync UI state
             this.ui.updateProgress(processedCount, totalToProcess, speedInfo);
 
+            // Reactive Pressure Sensing (RPS) Logic
+            const jobDuration = performance.now() - jobStartTime;
+            this.latencyHistory.push(jobDuration);
+            if (this.latencyHistory.length > 10) this.latencyHistory.shift();
+
+            if (processedCount === this.BATCH_WARMUP) {
+                this.baselineLatency = this.latencyHistory.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / this.latencyHistory.length;
+                console.log(`%c[Optic Engine] Pressure sensing baseline established: ${this.baselineLatency.toFixed(2)}ms`, "color: #22C55E; font-weight: bold;");
+            }
+
+            if (processedCount > this.BATCH_WARMUP && this.baselineLatency > 0) {
+                const currentAvg = this.latencyHistory.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / this.latencyHistory.length;
+                const pressureFactor = currentAvg / this.baselineLatency;
+                
+                // Elastic Yield: Scaling delay based on pressure factor
+                // If system is sluggish (latency doubles), yield time grows by ~2.8x
+                yieldMs = baseYield * Math.pow(pressureFactor, 1.5);
+
+                if (pressureFactor > 1.5) {
+                    console.warn(`[Optic Engine] High pressure detected: ${pressureFactor.toFixed(2)}x slowdown. Rescaling yield to ${Math.round(yieldMs)}ms to stabilize V8 Heap.`);
+                }
+            }
+
             // Yield to Main Thread (OOM Prevention)
-            // Giving the event loop milliseconds allows V8's Garbage Collector
-            // to purge the detached Blobs and ArrayBuffers from RAM.
             if (processedCount % (poolSize * 2) === 0) {
                await new Promise(r => setTimeout(r, yieldMs));
             }

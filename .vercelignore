@@ -2,7 +2,6 @@
 .gemini/
 .vscode/
 design-system/
-Plano_de_Aula_OpticPress.md
 
 # Proteção de Arquivos de Ambiente e Logs (Security)
 .env
@@ -15,5 +14,6 @@ Thumbs.db
 
 # Test and Docs
 tests/
+docs/
 ui_ux_output.md
 test_compression.py
