@@ -12,7 +12,7 @@ Most "free" online compressors are either data-harvesters or gated by slow serve
 
 - **Off-Main-Thread Processing:** All compression logic runs in isolated Web Workers. Your UI stays at a buttery-smooth 60FPS even while processing 10,000+ files.
 - **RAM-Safe Pipeline:** Unlike naive implementations that crash the browser by holding blobs in memory, OpticPress utilizes **IndexedDB (via OpticDB)** as an ephemeral disk. Memory references are purged immediately after processing.
-- **Deterministic Scaling:** The worker pool auto-scales based on `navigator.hardwareConcurrency`, squeezing 100% efficiency out of high-end CPUs while maintaining an OOM (Out-of-Memory) protection "Yield" mechanism.
+- **Reactive Pressure Sensing (RPS):** OpticPress doesn't just guess performance based on hardware specs; it monitors real-time latency for every job. The engine dynamically scales its concurrency and yield-sleep cycles (Elastic Backoff) based on V8 Heap pressure and system response times to prevent OOM (Out-of-Memory) crashes.
 
 ---
 
@@ -21,7 +21,8 @@ Most "free" online compressors are either data-harvesters or gated by slow serve
 - **Massive Batch Support:** Handles thousands of images with a recursive folder traversal engine (`FileSystem API`).
 - **WebAssembly-Grade Speed:** Optimized `OffscreenCanvas` recycling and `createImageBitmap` decode-to-GPU pathways.
 - **Privacy First:** Your images never leave your machine. Processing happens entirely within the browser's sandbox.
-- **Professional IO:** Auto-generation of deterministic ZIP files via chunked disk-to-archive streaming.
+- **Professional IO:** Auto-generation of deterministic ZIP files via chunked disk-to-archive streaming, dynamically adjusted for device RAM (200MB chunks on mobile vs 800MB on desktop).
+- **Mobile-First Resilience:** Throttled concurrency and elastic yielding tailored for iOS/Android WebView contexts, ensuring professional stability on the go.
 - **Dark-Logic Ecosystem:** Slate/Emerald UI designed for high-precision analytical work, reflecting terminal-style performance.
 
 ---
