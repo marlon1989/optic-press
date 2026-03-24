@@ -99,7 +99,7 @@ class OpticThemeManager {
     // Update main button icon
     if (this.menuButton) {
       if (theme === 'system') {
-        this.menuButton.textContent = 'hdr_auto';
+        this.menuButton.textContent = 'monitor';
       } else if (theme === 'dark') {
         this.menuButton.textContent = 'dark_mode';
       } else {

@@ -14,6 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
   <script src="/js/init-theme.js"></script>
   <script type="module" src="/js/main.js"></script>
 </head>
@@ -23,25 +24,34 @@
   <nav
     class="bg-slate-50 dark:bg-slate-900 w-full border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm dark:shadow-none sticky top-0 z-50">
     <div class="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4 max-w-7xl mx-auto border-b-2 border-primary/10 mb-8">
-      <a href="compressor.html"
+      <a href="/"
         class="text-xl font-bold tracking-tight text-primary hover:text-primary-dim transition-none min-h-[44px] flex items-center">OpticPress</a>
 
       <div class="flex items-center">
         <div class="relative group" id="theme-selector">
           <button class="w-11 h-11 flex items-center justify-center material-symbols-outlined text-on-surface cursor-pointer border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-none rounded-sm" id="theme-menu-button">
-            dark_mode
+            monitor
           </button>
           <div class="absolute right-0 mt-3 w-40 bg-surface-container-highest border-2 border-primary flex flex-col z-[100] hidden shadow-none rounded-none" id="theme-dropdown">
             <button class="flex items-center justify-between px-4 py-3 min-h-[44px] hover:bg-primary/10 transition-none border-b-2 border-primary/10 text-sm font-bold text-on-surface w-full" data-theme="light">
-              <span>Light</span>
+              <div class="flex items-center space-x-3">
+                <span class="material-symbols-outlined text-lg">light_mode</span>
+                <span>Light</span>
+              </div>
               <span class="material-symbols-outlined text-sm hidden" data-check>check</span>
             </button>
             <button class="flex items-center justify-between px-4 py-3 min-h-[44px] hover:bg-primary/10 transition-none border-b-2 border-primary/10 text-sm font-bold text-on-surface w-full" data-theme="dark">
-              <span>Dark</span>
+              <div class="flex items-center space-x-3">
+                <span class="material-symbols-outlined text-lg">dark_mode</span>
+                <span>Dark</span>
+              </div>
               <span class="material-symbols-outlined text-sm hidden" data-check>check</span>
             </button>
             <button class="flex items-center justify-between px-4 py-3 min-h-[44px] hover:bg-primary/10 transition-none text-sm font-bold text-on-surface w-full" data-theme="system">
-              <span>System</span>
+              <div class="flex items-center space-x-3">
+                <span class="material-symbols-outlined text-lg">monitor</span>
+                <span>System</span>
+              </div>
               <span class="material-symbols-outlined text-sm hidden" data-check>check</span>
             </button>
           </div>
