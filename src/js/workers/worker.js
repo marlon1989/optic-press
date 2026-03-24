@@ -9,6 +9,7 @@
  * @property {string} id
  * @property {File} file
  * @property {number} quality
+ * @property {string} [targetMime]
  */
 
 /**
@@ -34,10 +35,12 @@
 let canvas = null;
 /** @type {OffscreenCanvasRenderingContext2D | null} */
 let ctx = null;
+/** @type {boolean | null} */
+let currentAlpha = null;
 
 self.onmessage = async function(e) {
   /** @type {WorkerMessage} */
-  const { id, file, quality } = e.data;
+  const { id, file, quality, targetMime = 'image/jpeg' } = e.data;
   
   try {
     // createImageBitmap works seamlessly in workers
@@ -65,28 +68,42 @@ self.onmessage = async function(e) {
       }
     }
 
-    // Reuse OffscreenCanvas for Background Rendering to prevent RAM leakage
-    if (!canvas) {
+    // Reuse OffscreenCanvas with Alpha Awareness
+    const hasAlpha = targetMime !== 'image/jpeg';
+    
+    if (!canvas || currentAlpha !== hasAlpha) {
       canvas = new OffscreenCanvas(targetW, targetH);
-      ctx = canvas.getContext('2d', { alpha: false }); // alpha false optimizes memory for jpegs
+      ctx = canvas.getContext('2d', { alpha: hasAlpha });
+      currentAlpha = hasAlpha;
     } else {
       canvas.width = targetW;
       canvas.height = targetH;
     }
     
     if (!ctx) throw new Error("Failed to get 2D rendering context");
-
-    // Fill white background for transparent images (e.g., PNGs) before drawing
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, targetW, targetH);
+    
+    // Clear canvas and fill white background *only* for JPEGs
+    if (!hasAlpha) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, targetW, targetH);
+    } else {
+      ctx.clearRect(0, 0, targetW, targetH);
+    }
     
     ctx.drawImage(bitmap, 0, 0, targetW, targetH);
     bitmap.close(); // Immediate GC trigger
 
-    const targetMime = 'image/jpeg';
-    
-    // convertToBlob is the OffscreenCanvas equivalent of toBlob
-    const blob = await canvas.convertToBlob({ type: targetMime, quality: quality });
+    // Resilient Conversion Flow (With Fallbacks for AVIF/Edge formats)
+    /** @type {Blob} */
+    let blob;
+    try {
+      // @ts-ignore
+      blob = await canvas.convertToBlob({ type: targetMime, quality: quality });
+    } catch (e) {
+      console.warn(`[Optic Worker] Failed conversion to ${targetMime}. Falling back to image/webp.`);
+      // @ts-ignore
+      blob = await canvas.convertToBlob({ type: 'image/webp', quality: quality });
+    }
     
     // Strict EXIF Stripping (Zero Trust Privacy)
     // Nós nunca mais devolvemos o 'file' original, garantindo que metadados 

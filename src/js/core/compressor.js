@@ -577,7 +577,7 @@ class OpticFileQueue {
             processNext(worker).then(resolve);
         };
         
-        worker.postMessage({ id: String(fileIndex), file, quality: 0.70 });
+        worker.postMessage({ id: String(fileIndex), file, quality: 0.70, targetMime: file.type });
       });
     };
 
