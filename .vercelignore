@@ -1,0 +1,19 @@
+.agent/
+.gemini/
+.vscode/
+design-system/
+Plano_de_Aula_OpticPress.md
+
+# Proteção de Arquivos de Ambiente e Logs (Security)
+.env
+.env.*
+*.log
+
+# Artefatos de Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# Test and Docs
+tests/
+ui_ux_output.md
+test_compression.py

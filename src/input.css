@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Exported for compressor js toast notifications */
+    --error-container: theme('colors.error-container');
+    --error: theme('colors.error');
+    --inverse-surface: theme('colors.inverse-surface');
+    --inverse-on-surface: theme('colors.inverse-on-surface');
+
+    /* Design Tokens dynamic mapping */
+    /* Design Tokens dynamic mapping (Light Mode - Prosumer SaaS) */
+    --background: #F8FAFC;         /* Soft slate base */
+    --surface: #FFFFFF;            /* Pure white for prominent cards */
+    --surface-container-lowest: #FFFFFF;
+    --surface-container-low: #F1F5F9; 
+    --surface-container-highest: #E2E8F0;
+    --on-surface: #0F172A;         /* High contrast slate text */
+    --on-surface-variant: #475569;
+    
+    --primary: #0891B2;            /* Cyan 600 */
+    --primary-dim: #0E7490;        /* Cyan 700 */
+    --primary-container: #CFFAFE;  /* Cyan 100 */
+    --on-primary: #FFFFFF;
+    --on-primary-container: #164E63; /* Cyan 900 */
+
+    --tertiary: #22C55E;           /* Success Green */
+  }
+
+  .dark {
+    /* Atmospheric Dark Mode Override - Prosumer SaaS Deep Cyan */
+    --background: #020617;         /* Deepest slate/navy */
+    --surface: #0F172A;            /* Deep slate for cards */
+    --surface-container-lowest: #020617; 
+    --surface-container-low: #0F172A;
+    --surface-container-highest: #1E293B; 
+    --on-surface: #F8FAFC; 
+    --on-surface-variant: #94A3B8; 
+    
+    --primary: #22D3EE;            /* Cyan 400 - Neon blue for dark */
+    --primary-dim: #06B6D4;        /* Cyan 500 */
+    --primary-container: #164E63;  /* Deep cyan container */
+    --on-primary: #083344;         /* Very dark cyan text on button */
+    --on-primary-container: #CFFAFE;
+
+    --tertiary: #22C55E;
+  }
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6, .brand-font {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-surface border-2 border-primary-container shadow-none;
+  }
+  .ambient-shadow {
+    @apply shadow-none transform-none;
+  }
+  .ghost-border {
+    @apply border-2 border-primary-container;
+  }
+  
+  /* Interactive States for JS Hooks */
+  #drop-zone.is-dragover {
+    @apply bg-primary-container border-primary border-solid scale-[1.02];
+  }
+  
+  .result-card.is-selected {
+    @apply outline outline-4 outline-primary ring-0 shadow-lg bg-primary-container;
+    border-color: transparent;
+  }
+}

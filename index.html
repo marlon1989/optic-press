@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>OpticPress | Professional Image Compression</title>
+  
+  <!-- Content Security Policy: Strict Confinement (Defense-in-Depth) -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self';" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
+  <script src="/js/init-theme.js"></script>
+  <script type="module" src="/js/main.js"></script>
+</head>
+
+<body class="bg-surface text-on-surface selection:bg-primary-fixed">
+  <!-- TopNavBar -->
+  <nav
+    class="bg-slate-50 dark:bg-slate-900 w-full border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm dark:shadow-none sticky top-0 z-50">
+    <div class="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4 max-w-7xl mx-auto border-b-2 border-primary/10 mb-8">
+      <a href="compressor.html"
+        class="text-xl font-bold tracking-tight text-primary hover:text-primary-dim transition-none min-h-[44px] flex items-center">OpticPress</a>
+
+      <div class="flex items-center">
+        <div class="relative group" id="theme-selector">
+          <button class="w-11 h-11 flex items-center justify-center material-symbols-outlined text-on-surface cursor-pointer border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-none rounded-sm" id="theme-menu-button">
+            dark_mode
+          </button>
+          <div class="absolute right-0 mt-3 w-40 bg-surface-container-highest border-2 border-primary flex flex-col z-[100] hidden shadow-none rounded-none" id="theme-dropdown">
+            <button class="flex items-center justify-between px-4 py-3 min-h-[44px] hover:bg-primary/10 transition-none border-b-2 border-primary/10 text-sm font-bold text-on-surface w-full" data-theme="light">
+              <span>Light</span>
+              <span class="material-symbols-outlined text-sm hidden" data-check>check</span>
+            </button>
+            <button class="flex items-center justify-between px-4 py-3 min-h-[44px] hover:bg-primary/10 transition-none border-b-2 border-primary/10 text-sm font-bold text-on-surface w-full" data-theme="dark">
+              <span>Dark</span>
+              <span class="material-symbols-outlined text-sm hidden" data-check>check</span>
+            </button>
+            <button class="flex items-center justify-between px-4 py-3 min-h-[44px] hover:bg-primary/10 transition-none text-sm font-bold text-on-surface w-full" data-theme="system">
+              <span>System</span>
+              <span class="material-symbols-outlined text-sm hidden" data-check>check</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+    <!-- Hero & Branding Section -->
+    <header class="mb-16 sm:mb-24 text-center">
+      <h1 class="text-4xl sm:text-5xl md:text-[3.5rem] font-extrabold leading-tight tracking-tighter text-on-surface mb-6">
+        Crystal Clear <span
+          class="bg-gradient-to-r from-primary to-primary-dim bg-clip-text text-transparent">Image</span>
+        Compression
+      </h1>
+      <p class="text-on-surface-variant max-w-2xl mx-auto text-base md:text-lg px-2 sm:px-0 font-medium">
+        Make your images load instantly without losing quality. <br class="hidden sm:block"/> Fast, private, and works right in your browser.
+      </p>
+    </header>
+    <!-- Drop Zone Section -->
+    <section class="mb-16 sm:mb-24">
+      <div class="bg-surface-container-low rounded-xl p-1 shadow-sm">
+        <div id="drop-zone"
+          class="border-2 border-dashed border-outline-variant/30 rounded-lg bg-surface-container-lowest flex flex-col items-center justify-center py-16 md:py-24 px-4 sm:px-6 transition-all duration-500 ease-out hover:bg-surface-bright hover:scale-[1.01] hover:shadow-2xl hover:shadow-primary/10 group cursor-pointer">
+          <div
+            class="w-16 h-16 rounded-full bg-primary-container flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <span class="material-symbols-outlined text-on-primary-container text-3xl"
+              data-icon="cloud_upload">cloud_upload</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-bold text-on-surface mb-2 text-center">Drop your photos here</h2>
+          <p class="text-on-surface-variant font-medium tracking-wide mb-8 text-center text-sm">Supports WEBP, PNG, JPEG, and AVIF
+            up to 50MB</p>
+          <button id="select-files-btn"
+            class="bg-primary text-on-primary px-6 py-3 sm:px-8 min-h-[44px] rounded-full text-base sm:text-lg font-bold transition-colors hover:bg-primary-dim shadow-sm hover:shadow-md">
+            Select Files
+          </button>
+        </div>
+        <input type="file" id="file-input" class="hidden" accept="image/webp,image/png,image/jpeg,image/avif" multiple
+          aria-hidden="true" />
+      </div>
+    </section>
+    <!-- Active Compression State -->
+    <section class="mb-16 sm:mb-24 hidden" id="active-compression-section">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+        <div>
+          <h3 class="text-xl sm:text-2xl font-bold text-on-surface">Compressing...</h3>
+          <p class="text-on-surface-variant text-sm sm:text-base font-medium" id="active-compression-count">Preparing your images</p>
+        </div>
+        <div
+          class="flex items-center space-x-2 bg-secondary-container text-on-secondary-container px-4 py-2 min-h-[44px] rounded-full font-medium text-sm">
+          <span class="material-symbols-outlined text-sm animate-spin" data-icon="sync"
+            style="font-variation-settings: 'FILL' 0;">sync</span>
+          <span>Optimizing...</span>
+        </div>
+      </div>
+      <div class="space-y-4" id="active-jobs-list">
+        <!-- Active jobs injected via JS -->
+      </div>
+    </section>
+    <!-- Completed Results Section (Bento Grid Style) -->
+    <section class="mb-16 sm:mb-24 hidden" id="completed-compression-section">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+        <div>
+          <h3 class="text-xl sm:text-2xl font-bold text-on-surface">All done!</h3>
+          <p class="text-on-surface-variant text-sm sm:text-base font-medium" id="completed-compression-stats">Your images are ready</p>
+        </div>
+        <button id="download-all-btn"
+          class="bg-tertiary text-on-tertiary px-6 py-3 sm:px-10 sm:py-4 min-h-[44px] rounded-full text-base sm:text-lg font-bold flex items-center justify-center space-x-3 transition-colors hover:bg-tertiary-dim shadow-sm hover:shadow-md w-full md:w-auto">
+          <span class="material-symbols-outlined" data-icon="download">download</span>
+          <span id="download-btn-text">Download All (0 KB)</span>
+        </button>
+      </div>
+    </section>
+  </main>
+  <!-- Footer -->
+  <footer class="bg-slate-50 dark:bg-slate-950 w-full border-t border-slate-200 dark:border-slate-800 mt-20">
+    <div
+      class="flex flex-col items-center px-8 py-12 max-w-7xl mx-auto space-y-4">
+      <div class="text-sm font-medium text-slate-500 dark:text-slate-400 text-center">© <span id="current-year">2024</span> OpticPress Imaging. All rights reserved.</div>
+    </div>
+  </footer>
+</body>
+
+</html>
