@@ -496,7 +496,6 @@ class OpticFileQueue {
       this.pulseId = requestAnimationFrame(tick);
     };
     this.pulseId = requestAnimationFrame(tick);
-    console.log("%c[Optic Engine] Heartbeat pulse initiated.", "color: #0891B2; font-weight: bold;");
   }
 
   stopPulse() {
@@ -589,7 +588,6 @@ class OpticFileQueue {
 
             if (processedCount === this.BATCH_WARMUP) {
                 this.baselineLatency = this.latencyHistory.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / this.latencyHistory.length;
-                console.log(`%c[Optic Engine] Pressure sensing baseline established: ${this.baselineLatency.toFixed(2)}ms`, "color: #22C55E; font-weight: bold;");
             }
 
             if (processedCount > this.BATCH_WARMUP && this.baselineLatency > 0) {
@@ -608,9 +606,6 @@ class OpticFileQueue {
                 // Adaptive Frequency: If pressure is high, we yield more often
                 yieldRatio = combinedPressure > 1.5 ? 1.0 : 2.0;
 
-                if (combinedPressure > 1.8) {
-                    console.warn(`[Optic Engine] Critical pressure: ${combinedPressure.toFixed(2)}x. Pulse Lag: ${this.pulseLag.toFixed(1)}ms. Throttling engine.`);
-                }
             }
 
             // Yield to Main Thread (Adaptive Frequency)
