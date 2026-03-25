@@ -36,6 +36,7 @@ const downloadAllBtn = document.getElementById('download-all-btn');
  * @property {string} id
  * @property {string} filename
  * @property {number} size
+ * @property {string} mime
  */
 
 class OpticDB {
@@ -71,14 +72,15 @@ class OpticDB {
    * @param {string | number} id
    * @param {Blob} blob
    * @param {string} filename
+   * @param {string} [mime]
    * @returns {Promise<void>}
    */
-  async putFile(id, blob, filename) {
+  async putFile(id, blob, filename, mime = 'image/jpeg') {
     const db = await this.init();
     return new Promise((resolve, reject) => {
       const tx = db.transaction([this.storeName], 'readwrite');
       const store = tx.objectStore(this.storeName);
-      store.put({ id, blob, filename });
+      store.put({ id, blob, filename, mime });
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -460,9 +462,6 @@ class OpticFileQueue {
         showToast(`This file is a bit too large: ${file.name}`, 'error');
         return;
       }
-      if (file.type === 'image/png') {
-        showToast('Heads up! We will convert transparent PNGs to a white background.', 'warning');
-      }
       validFiles.push(file);
     });
 
@@ -551,12 +550,12 @@ class OpticFileQueue {
         const jobStartTime = performance.now();
         
         worker.onmessage = async (/** @type {MessageEvent} */ e) => {
-            const { success, blob, finalSize, savingsPct, filename, error } = e.data;
+            const { success, blob, finalSize, savingsPct, filename, finalMime, error } = e.data;
             
             if (success) {
                 // Save to ephemeral disk (IndexedDB) and erase RAM reference
-                await this.db.putFile(String(fileIndex), blob, filename);
-                this.processedFileStats.push({ id: String(fileIndex), filename, size: finalSize });
+                await this.db.putFile(String(fileIndex), blob, filename, finalMime);
+                this.processedFileStats.push({ id: String(fileIndex), filename, size: finalSize, mime: finalMime });
                 this.totalOriginalBytes += file.size;
                 this.totalOptimizedBytes += finalSize;
             } else {
@@ -758,9 +757,13 @@ class OpticExporter {
         for (const stat of chunk) {
           const record = await this.db.getFile(stat.id);
           if (record && record.blob) {
-            // Anti Zip-Slip: Força a remoção de qualquer path traversal ou diretório malicioso injetado via file API
+            // Anti Zip-Slip: Remove path traversal or malicious directory injection via file API
             const safeName = record.filename.replace(/^.*[\\\/:]/, '').replace(/\.[^.]+$/, '');
-            zip.file(`${safeName}.jpeg`, record.blob);
+            // Alpha Intelligence: use the actual MIME type stored, never hardcode .jpeg
+            /** @type {Record<string, string>} */
+            const mimeToExt = { 'image/jpeg': 'jpeg', 'image/webp': 'webp', 'image/png': 'png', 'image/avif': 'avif' };
+            const ext = mimeToExt[stat.mime] || mimeToExt[record.blob.type] || 'jpeg';
+            zip.file(`${safeName}.${ext}`, record.blob);
           }
           loaded++;
           if (loaded % 25 === 0) await new Promise(r => setTimeout(r, 0)); // yield loop
