@@ -12,10 +12,50 @@
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
   <link rel="icon" type="image/png" href="/favicon.png" />
-  <script src="/js/init-theme.js"></script>
+  
+  <!-- Critical Script: Inline Theme Initialization -->
+  <script>
+    (function() {
+      const opticTheme = localStorage.getItem('optic_theme') || 'system';
+      if (opticTheme === 'dark' || (opticTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+  
+  <link rel="modulepreload" href="/src/js/main.js">
+  
+  <style>
+    :root {
+      --background: #F8FAFC;
+      --surface: #FFFFFF;
+      --on-surface: #0F172A;
+      --primary: #0891B2;
+      --primary-dim: #0E7490;
+      --primary-container: #CFFAFE;
+    }
+    .dark {
+      --background: #020617;
+      --surface: #0F172A;
+      --on-surface: #F8FAFC;
+      --primary: #22D3EE;
+      --primary-dim: #06B6D4;
+      --primary-container: #164E63;
+    }
+    body {
+      background-color: var(--background);
+      color: var(--on-surface);
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      margin: 0;
+    }
+    .bg-surface { background-color: var(--surface); }
+    .text-primary { color: var(--primary); }
+  </style>
+  
   <script type="module" src="/src/js/main.js"></script>
 </head>
 
@@ -29,8 +69,10 @@
 
       <div class="flex items-center">
         <div class="relative group" id="theme-selector">
-          <button class="w-11 h-11 flex items-center justify-center material-symbols-outlined text-on-surface cursor-pointer border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-none rounded-sm" id="theme-menu-button">
-            monitor
+          <button class="w-11 h-11 flex items-center justify-center text-on-surface cursor-pointer border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-none rounded-sm" id="theme-menu-button">
+            <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+              <path d="M160-120v-80h80v-400q0-33 23.5-56.5T320-680h320q33 0 56.5 23.5T720-600v400h80v80H160Zm160-160h320v-400H320v400Zm0 0v-400 400Z"/>
+            </svg>
           </button>
           <div class="absolute right-0 mt-3 w-40 bg-surface-container-highest border-2 border-primary flex flex-col z-[100] hidden shadow-none rounded-none" id="theme-dropdown">
             <button class="flex items-center justify-between px-4 py-3 min-h-[44px] hover:bg-primary/10 transition-none border-b-2 border-primary/10 text-sm font-bold text-on-surface w-full" data-theme="light">
@@ -77,9 +119,10 @@
         <div id="drop-zone"
           class="border-2 border-dashed border-outline-variant/30 rounded-lg bg-surface-container-lowest flex flex-col items-center justify-center py-16 md:py-24 px-4 sm:px-6 transition-all duration-500 ease-out hover:bg-surface-bright hover:scale-[1.01] hover:shadow-2xl hover:shadow-primary/10 group cursor-pointer">
           <div
-            class="w-16 h-16 rounded-full bg-primary-container flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-            <span class="material-symbols-outlined text-on-primary-container text-3xl"
-              data-icon="cloud_upload">cloud_upload</span>
+            class="w-16 h-16 rounded-full bg-primary-container flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-on-primary-container">
+            <svg xmlns="http://www.w3.org/2000/svg" height="32" viewBox="0 -960 960 960" width="32" fill="currentColor">
+              <path d="M440-200h80v-167l64 64 56-57-160-160-160 160 57 56 63-63v167ZM240-80q-66 0-113-47T80-240q0-47 25-86t70-59q26-77 87.5-126T396-560q11 0 22 1t22 3q17-53 60.5-88.5T600-680q75 0 127.5 52.5T780-500q0 15-3 30t-9 29q50 14 81 55.5t31 95.5q0 66-47 113T720-80H240Zm0-80h480q33 0 56.5-23.5T800-240q0-33-23.5-56.5T720-320h-80v-40q0-67-46.5-113.5T480-520q-7 0-14 .5t-14 1.5l-20 2-12-16q-39-51-99-80.5T192-642q-43 43-67.5 98.5T100-430q0 66 47 113t113 47H480Zm0-300Z"/>
+            </svg>
           </div>
           <h2 class="text-xl sm:text-2xl font-bold text-on-surface mb-2 text-center">Drop your photos here</h2>
           <p class="text-on-surface-variant font-medium tracking-wide mb-8 text-center text-sm">Supports WEBP, PNG, JPEG, and AVIF
