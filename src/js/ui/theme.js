@@ -96,15 +96,11 @@ class OpticThemeManager {
 
   /** @param {string} theme */
   updateUI(theme) {
-    // Update main button icon
+    // Update main button icon — button IS the material-symbols-outlined span
     if (this.menuButton) {
-      if (theme === 'system') {
-        this.menuButton.textContent = 'monitor';
-      } else if (theme === 'dark') {
-        this.menuButton.textContent = 'dark_mode';
-      } else {
-        this.menuButton.textContent = 'light_mode';
-      }
+      /** @type {Record<string, string>} */
+      const iconMap = { system: 'monitor', dark: 'dark_mode', light: 'light_mode' };
+      this.menuButton.textContent = iconMap[theme] || 'monitor';
     }
 
     // Update checkmarks in dropdown
