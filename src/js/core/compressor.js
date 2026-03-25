@@ -292,6 +292,14 @@ class OpticFileQueue {
     this.latencyHistory = [];
     /** @type {number} */
     this.BATCH_WARMUP = 10;
+    
+    // Heartbeat Pulse (Resiliency Engine)
+    /** @type {number} */
+    this.pulseLag = 0;
+    /** @type {number} */
+    this.lastPulseTime = 0;
+    /** @type {number | null} */
+    this.pulseId = null;
 
     if (this.dropZone && this.fileInput) {
       this.bindEvents();
@@ -472,12 +480,38 @@ class OpticFileQueue {
     }
   }
 
+  /**
+   * Main Thread Pulse Sensing (HEARTBEAT)
+   * Monitors the UI thread's ability to maintain a consistent frame rate.
+   * Discrepancies between frames indicate main-thread starvation.
+   */
+  startPulse() {
+    this.lastPulseTime = performance.now();
+    const tick = () => {
+      const now = performance.now();
+      const delta = now - this.lastPulseTime;
+      // Ideal frame is 16.6ms. We track anything above that as 'starvation lag'.
+      this.pulseLag = Math.max(0, delta - 16.6);
+      this.lastPulseTime = now;
+      this.pulseId = requestAnimationFrame(tick);
+    };
+    this.pulseId = requestAnimationFrame(tick);
+    console.log("%c[Optic Engine] Heartbeat pulse initiated.", "color: #0891B2; font-weight: bold;");
+  }
+
+  stopPulse() {
+    if (this.pulseId) cancelAnimationFrame(this.pulseId);
+    this.pulseId = null;
+    this.pulseLag = 0;
+  }
+
   async startProcessing() {
     if (this.isProcessing) return;
     this.isProcessing = true;
 
     const totalToProcess = this.queue.length;
     this.ui.showActive(totalToProcess);
+    this.startPulse();
     
     // Optic Web Worker Pool Initialization (Adaptive Scaling)
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -500,6 +534,8 @@ class OpticFileQueue {
     // Elena's Rigor: Adaptive Yield duration (Initial heuristic)
     let yieldMs = (isMobile || lowMemory) ? 40 : 10;
     const baseYield = yieldMs;
+    // Elite Pressure Heuristic: Yield ratio (lower = more frequent yielding)
+    let yieldRatio = 2.0; 
 
     // The Worker Dispatcher
     /** @param {Worker} worker */
@@ -558,20 +594,29 @@ class OpticFileQueue {
 
             if (processedCount > this.BATCH_WARMUP && this.baselineLatency > 0) {
                 const currentAvg = this.latencyHistory.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) / this.latencyHistory.length;
-                const pressureFactor = currentAvg / this.baselineLatency;
+                const workerPressure = currentAvg / this.baselineLatency;
                 
-                // Elastic Yield: Scaling delay based on pressure factor
-                // If system is sluggish (latency doubles), yield time grows by ~2.8x
-                yieldMs = baseYield * Math.pow(pressureFactor, 1.5);
+                // Sigmoid Scaling: We combine worker pressure with main-thread pulse lag.
+                // pulseLag is usually 0. If it climbs to 10-20ms, it means the main thread is starving.
+                const pulseHardness = 1 + (this.pulseLag / 16.6);
+                const combinedPressure = workerPressure * pulseHardness;
+                
+                // Elastic Yield: Clamped Sigmoid Scaling
+                // yieldMs = base * (1 + combinedPressure^1.5), capped at 500ms
+                yieldMs = Math.min(500, baseYield * (1 + Math.pow(combinedPressure - 1, 1.8)));
 
-                if (pressureFactor > 1.5) {
-                    console.warn(`[Optic Engine] High pressure detected: ${pressureFactor.toFixed(2)}x slowdown. Rescaling yield to ${Math.round(yieldMs)}ms to stabilize V8 Heap.`);
+                // Adaptive Frequency: If pressure is high, we yield more often
+                yieldRatio = combinedPressure > 1.5 ? 1.0 : 2.0;
+
+                if (combinedPressure > 1.8) {
+                    console.warn(`[Optic Engine] Critical pressure: ${combinedPressure.toFixed(2)}x. Pulse Lag: ${this.pulseLag.toFixed(1)}ms. Throttling engine.`);
                 }
             }
 
-            // Yield to Main Thread (OOM Prevention)
-            if (processedCount % (poolSize * 2) === 0) {
-               await new Promise(r => setTimeout(r, yieldMs));
+            // Yield to Main Thread (Adaptive Frequency)
+            // If yieldRatio is 1.0, we yield every poolSize jobs.
+            if (processedCount % Math.max(1, Math.round(poolSize * yieldRatio)) === 0) {
+               await new Promise(r => setTimeout(r, Math.max(0, yieldMs)));
             }
 
             processNext(worker).then(resolve);
@@ -586,6 +631,7 @@ class OpticFileQueue {
     
     // Teardown & Finalization
     workers.forEach(w => w.terminate());
+    this.stopPulse();
     this.queue = [];
 
     this.ui.hideActive();
