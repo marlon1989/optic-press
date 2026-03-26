@@ -10,38 +10,11 @@
  * preventing heap spikes in the UI thread when many workers finish simultaneously.
  */
 
-/**
- * @typedef {Object} WorkerMessage
- * @property {string} id
- * @property {File} file
- * @property {number} quality
- * @property {string} [targetMime]
- */
-
-/**
- * @typedef {Object} WorkerResultSuccess
- * @property {string} id
- * @property {boolean} success
- * @property {number} finalSize
- * @property {number} savingsPct
- * @property {string} filename
- * @property {string} finalMime
- * @property {number} originalSize
- */
-
-/**
- * @typedef {Object} WorkerResultError
- * @property {string} id
- * @property {boolean} success
- * @property {string} error
- * @property {string} filename
- */
-
-// ── WorkerDB (True Worker-to-Disk Architecture) ──────────────────────────────
+// ── CompressionDB (True Worker-to-Disk Architecture) ──────────────────────────────
 // A lean IndexedDB client embedded directly in the Worker.
 // The Worker persists compressed Blobs to disk without crossing the
 // postMessage boundary — the Main Thread only receives metadata (JSON).
-class WorkerDB {
+class CompressionDB {
   constructor() {
     /** @type {string} */
     this.dbName = 'OpticPressDB';
@@ -93,7 +66,7 @@ class WorkerDB {
   }
 }
 
-const workerDB = new WorkerDB();
+const compressionDB = new CompressionDB();
 
 // ── Canvas State (Recycled across jobs) ──────────────────────────────────────
 /** @type {OffscreenCanvas | null} */
@@ -254,7 +227,7 @@ self.onmessage = async function(e) {
     // The Main Thread receives ONLY metadata (no Blob crossing postMessage).
     // This eliminates the heap spike that would occur if 32 workers posted
     // 20MB blobs simultaneously to the main thread.
-    await workerDB.putFile(id, finalBlob, file.name, finalBlob.type);
+    await compressionDB.putFile(id, finalBlob, file.name, finalBlob.type);
     
     // Post ONLY lightweight metadata back to the Main Thread
     self.postMessage({

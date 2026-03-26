@@ -31,13 +31,7 @@ const downloadAllBtn = document.getElementById('download-all-btn');
 
 // ── IndexedDB Wrapper (RAM Eradication Engine) ──────────────────────
 
-/**
- * @typedef {Object} ProcessedFileStat
- * @property {string} id
- * @property {string} filename
- * @property {number} size
- * @property {string} mime
- */
+// ── IndexedDB Wrapper (RAM Eradication Engine) ──────────────────────
 
 class OpticDB {
   constructor() {
@@ -117,16 +111,7 @@ const db = new OpticDB();
 
 // ── Drop Zone Architecture (File API) ────────────────────────────────
 
-/**
- * @typedef {Object} OpticUIConfig
- * @property {HTMLElement | null} dropZone
- * @property {HTMLElement | null} activeSection
- * @property {HTMLElement | null} jobsList
- * @property {HTMLElement | null} countText
- * @property {HTMLElement | null} completedSection
- * @property {HTMLElement | null} completedStatsText
- * @property {HTMLElement | null} downloadBtnText
- */
+// ── Drop Zone Architecture (File API) ────────────────────────────────
 
 class OpticUI {
   /** @param {OpticUIConfig} config */
@@ -691,14 +676,7 @@ const uploader = new OpticFileQueue({
 
 // ── Download All (Batch Zip Generation) ──────────────────────────────────
 
-/**
- * @typedef {Object} OpticExporterConfig
- * @property {HTMLElement | null} btn
- * @property {OpticFileQueue} sourceQueue
- * @property {OpticDB} db
- * @property {string | URL} zipWorkerUrl
- * @property {function(string, string=): void} [showToast]
- */
+// ── Download All (Batch Zip Generation) ──────────────────────────────────
 
 class OpticExporter {
   /**

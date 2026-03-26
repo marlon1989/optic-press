@@ -17,8 +17,8 @@ self.importScripts('/js/vendor/jszip.min.js');
 // @ts-ignore
 const JSZip = self.JSZip;
 
-// ── WorkerDB (Shared IndexedDB client — same DB as compression worker) ─────────
-class WorkerDB {
+// ── ZipWorkerDB (Shared IndexedDB client — same DB as compression worker) ─────────
+class ZipWorkerDB {
   constructor() {
     /** @type {string} */
     this.dbName = 'OpticPressDB';
@@ -67,15 +67,7 @@ class WorkerDB {
   }
 }
 
-const workerDB = new WorkerDB();
-
-/**
- * @typedef {Object} ProcessedFileStat
- * @property {string} id
- * @property {string} filename
- * @property {number} size
- * @property {string} mime
- */
+const zipDB = new ZipWorkerDB();
 
 /** @type {Record<string, string>} */
 const MIME_TO_EXT = {
@@ -97,7 +89,7 @@ self.onmessage = async function (e) {
     // Sequentially hydrate RAM from IndexedDB — prevents OOM from parallel Blob reads
     let loaded = 0;
     for (const stat of stats) {
-      const record = await workerDB.getFile(stat.id);
+      const record = await zipDB.getFile(stat.id);
       if (record && record.blob) {
         // Anti Zip-Slip: sanitize filename to prevent path traversal injection
         const safeName = record.filename
