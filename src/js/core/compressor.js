@@ -763,7 +763,7 @@ class OpticExporter {
 
         // Dispatch to Zip Worker — blocking zip.generateAsync() runs off-thread
         const chunkBlob = await new Promise((resolve, reject) => {
-          const zipWorker = new Worker(this.zipWorkerUrl, { type: 'module' });
+          const zipWorker = new Worker(this.zipWorkerUrl);
           zipWorker.onmessage = (/** @type {MessageEvent} */ e) => {
             zipWorker.terminate();
             if (e.data.error) {

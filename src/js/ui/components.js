@@ -35,7 +35,7 @@ class OpticResultCard extends HTMLElement {
         <div class="result-card bg-surface-container-low p-8 rounded-xl border border-primary/10 relative overflow-hidden h-full flex flex-col cursor-pointer transition-shadow hover:shadow-md">
           <div class="absolute top-0 right-0 p-4">
             <span class="material-symbols-outlined text-primary" data-icon="verified"
-              style="font-variation-settings: 'FILL' 1;">verified</span>
+              class="material-symbols-outlined text-emerald-500 text-sm icon-filled">verified</span>
           </div>
           <div class="flex justify-between items-start mb-8">
             <div class="w-16 h-16 bg-surface-container-lowest rounded-lg overflow-hidden shadow-sm">
@@ -131,7 +131,7 @@ class OpticHistoryRow extends HTMLElement {
       <div class="grid grid-cols-12 gap-4 px-6 py-4 items-center border-t border-outline-variant/10 hover:bg-surface-bright transition-colors group cursor-pointer">
         <div class="col-span-5 flex items-center space-x-4">
           <div class="w-10 h-10 bg-surface-container rounded flex items-center justify-center text-primary">
-            <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">image</span>
+            <span class="material-symbols-outlined text-xl icon-filled">image</span>
           </div>
           <div class="overflow-hidden">
             <h4 class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">${filename}</h4>

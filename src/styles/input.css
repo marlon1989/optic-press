@@ -81,6 +81,10 @@
 
   /* CSP-Safe Icon Variant: replaces style="font-variation-settings: 'FILL' 0;"
      Inline style attributes require 'unsafe-hashes' in style-src; a CSS class does not. */
+  .icon-filled {
+    font-variation-settings: 'FILL' 1;
+  }
+
   .icon-outline {
     font-variation-settings: 'FILL' 0;
   }

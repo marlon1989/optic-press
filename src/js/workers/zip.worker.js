@@ -12,7 +12,10 @@
  * Posts:    { chunkBlob: Blob, filename: string, chunkIndex: number, totalChunks: number, error?: string }
  */
 
-import JSZip from 'jszip';
+// @ts-ignore
+self.importScripts('/js/vendor/jszip.min.js');
+// @ts-ignore
+const JSZip = self.JSZip;
 
 // ── WorkerDB (Shared IndexedDB client — same DB as compression worker) ─────────
 class WorkerDB {
