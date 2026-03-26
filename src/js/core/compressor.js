@@ -515,11 +515,27 @@ class OpticFileQueue {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     // @ts-ignore - deviceMemory is non-standard but stable in Chromium
     const lowMemory = (navigator.deviceMemory && navigator.deviceMemory < 4);
+
+    // ── Battery Status API (Predictive Resilience) ────────────────────────
+    // If the user is on low battery and unplugged, we become a considerate guest.
+    // We clamp concurrency to 1 and increase yield to prevent draining a dying battery.
+    let isBatteryLow = false;
+    if ('getBattery' in navigator) { // Firefox/Safari guard — API is Chromium-only
+      try {
+        // @ts-ignore - getBattery is non-standard but widely supported in Chromium
+        const battery = await navigator.getBattery();
+        if (battery.level < 0.20 && !battery.charging) {
+          isBatteryLow = true;
+        }
+      } catch (_e) { /* getBattery rejected — no-op, proceed normally */ }
+    }
     
-    // Elena's Rigor: Cap concurrency on mobile/low-memory to prevent browser crash (OOM)
-    const poolSize = (isMobile || lowMemory) 
-        ? Math.min(2, navigator.hardwareConcurrency || 2)
-        : Math.max(2, navigator.hardwareConcurrency || 4);
+    // Elite Priority: Battery constraint overrides all other heuristics
+    const poolSize = isBatteryLow
+        ? 1
+        : (isMobile || lowMemory) 
+            ? Math.min(2, navigator.hardwareConcurrency || 2)
+            : Math.max(2, navigator.hardwareConcurrency || 4);
 
     const workers = [];
     for(let i=0; i<poolSize; i++){
@@ -529,8 +545,8 @@ class OpticFileQueue {
     let processedCount = 0;
     let nextIndex = 0;
     const startTime = performance.now();
-    // Elena's Rigor: Adaptive Yield duration (Initial heuristic)
-    let yieldMs = (isMobile || lowMemory) ? 40 : 10;
+    // Adaptive Yield duration: Battery mode gets the most generous yield
+    let yieldMs = isBatteryLow ? 80 : (isMobile || lowMemory) ? 40 : 10;
     const baseYield = yieldMs;
     // Elite Pressure Heuristic: Yield ratio (lower = more frequent yielding)
     let yieldRatio = 2.0; 
@@ -550,11 +566,11 @@ class OpticFileQueue {
         const jobStartTime = performance.now();
         
         worker.onmessage = async (/** @type {MessageEvent} */ e) => {
-            const { success, blob, finalSize, savingsPct, filename, finalMime, error } = e.data;
+            const { success, finalSize, savingsPct, filename, finalMime, error } = e.data;
             
             if (success) {
-                // Save to ephemeral disk (IndexedDB) and erase RAM reference
-                await this.db.putFile(String(fileIndex), blob, filename, finalMime);
+                // Worker already persisted the blob to IndexedDB (True Worker-to-Disk).
+                // We only track the lightweight stat metadata here — zero blob RAM on the main thread.
                 this.processedFileStats.push({ id: String(fileIndex), filename, size: finalSize, mime: finalMime });
                 this.totalOriginalBytes += file.size;
                 this.totalOptimizedBytes += finalSize;

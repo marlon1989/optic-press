@@ -96,11 +96,19 @@ class OpticThemeManager {
 
   /** @param {string} theme */
   updateUI(theme) {
-    // Update main button icon — button IS the material-symbols-outlined span
+    // SVG-First Header: Toggle visibility of pre-rendered SVG icons in the menu button.
+    // We swap which SVG is visible instead of mutating textContent (which required the
+    // Material Symbols font to be loaded before rendering correctly).
     if (this.menuButton) {
       /** @type {Record<string, string>} */
-      const iconMap = { system: 'monitor', dark: 'dark_mode', light: 'light_mode' };
-      this.menuButton.textContent = iconMap[theme] || 'monitor';
+      const svgIdMap = { system: 'theme-icon-monitor', dark: 'theme-icon-dark', light: 'theme-icon-light' };
+      ['theme-icon-monitor', 'theme-icon-light', 'theme-icon-dark'].forEach(id => {
+        const el = this.menuButton?.querySelector(`#${id}`);
+        if (el) el.classList.add('hidden');
+      });
+      const activeId = svgIdMap[theme] || 'theme-icon-monitor';
+      const activeEl = this.menuButton.querySelector(`#${activeId}`);
+      if (activeEl) activeEl.classList.remove('hidden');
     }
 
     // Update checkmarks in dropdown
