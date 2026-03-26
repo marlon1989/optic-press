@@ -103,11 +103,11 @@ let ctx = null;
 /** @type {boolean | null} */
 let currentAlpha = null;
 
-// ── Codec Awareness Helpers ───────────────────────────────────────────────────
+// ── Alpha-First Pixel Inspector ───────────────────────────────────────────────
 
 /**
  * Inspects pixel data to determine if ANY alpha channel value < 255 exists.
- * If the entire image is fully opaque, we can safely convert to a lossy codec.
+ * Called AFTER drawing the bitmap, so the check is grounded in real pixel data.
  *
  * @param {OffscreenCanvasRenderingContext2D} context
  * @param {number} w
@@ -115,7 +115,6 @@ let currentAlpha = null;
  * @returns {boolean} true if the image contains at least one semi-transparent pixel
  */
 function hasTransparentPixels(context, w, h) {
-  // Sample the full image — getImageData returns RGBA Uint8ClampedArray
   const imageData = context.getImageData(0, 0, w, h);
   const data = imageData.data;
   // Alpha channel is every 4th byte (index 3, 7, 11, ...)
@@ -132,17 +131,15 @@ self.onmessage = async function(e) {
   const { id, file, quality, targetMime = 'image/jpeg' } = e.data;
   
   try {
-    // createImageBitmap works seamlessly in workers
     const bitmap = await createImageBitmap(file);
     
-    // Pixel bomb / Decompression bomb mitigation (Limit to ~64 Megapixels)
-    // Rejects files computationally designed to consume massive memory decoding
+    // Pixel / Decompression bomb mitigation (~64 Megapixel hard limit)
     if (bitmap.width * bitmap.height > 64000000) {
       bitmap.close();
       throw new Error(`File rejected: Exceeds safe megapixel limit (Image Bomb protection).`);
     }
 
-    // Adaptive downscaling logic (Maintains aspect ratio)
+    // Adaptive downscaling (Maintains aspect ratio)
     const MAX_DIMENSION = 2560;
     let targetW = bitmap.width;
     let targetH = bitmap.height;
@@ -157,64 +154,76 @@ self.onmessage = async function(e) {
       }
     }
 
-    // Reuse OffscreenCanvas with Alpha Awareness
-    // Initial assumption: preserve alpha for all non-JPEG formats
-    const hasAlpha = targetMime !== 'image/jpeg';
-    
-    if (!canvas || currentAlpha !== hasAlpha) {
-      canvas = new OffscreenCanvas(targetW, targetH);
-      ctx = canvas.getContext('2d', { alpha: hasAlpha });
-      currentAlpha = hasAlpha;
-    } else {
-      canvas.width = targetW;
-      canvas.height = targetH;
-    }
-    
-    if (!ctx) throw new Error("Failed to get 2D rendering context");
-    
-    // Clear canvas and fill white background *only* for JPEGs
-    if (!hasAlpha) {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, targetW, targetH);
-    } else {
-      ctx.clearRect(0, 0, targetW, targetH);
-    }
-    
-    ctx.drawImage(bitmap, 0, 0, targetW, targetH);
-    bitmap.close(); // Immediate GC trigger
-
-    // ── Codec Awareness (Opaque PNG → WebP Upgrade) ───────────────────────
-    // If the user uploaded a PNG but it contains zero transparent pixels,
-    // there is no reason to preserve the lossless PNG codec. We silently
-    // upgrade to WebP for superior compression ratios.
-    // The switch only happens if the WebP result is meaningfully smaller (< 40% of original).
     let effectiveMime = targetMime;
 
-    if (targetMime === 'image/png' && ctx) {
-      const isTransparent = hasTransparentPixels(ctx, targetW, targetH);
-      if (!isTransparent) {
-        // Probe WebP size before committing
-        // @ts-ignore
-        const webpProbe = await canvas.convertToBlob({ type: 'image/webp', quality });
-        // Only switch if WebP is at least 5x smaller (< 20% of original file size)
-        // This prevents degrading high-quality PNGs where WebP gains nothing
-        if (webpProbe.size < file.size * 0.40) {
-          effectiveMime = 'image/webp';
-          // Switch canvas context to non-alpha mode for optimal WebP encoding
-          if (currentAlpha !== false) {
+    if (targetMime === 'image/jpeg') {
+      // ── JPEG Path: alpha is never needed ─────────────────────────────────
+      if (!canvas || currentAlpha !== false) {
+        canvas = new OffscreenCanvas(targetW, targetH);
+        ctx = canvas.getContext('2d', { alpha: false });
+        currentAlpha = false;
+      } else {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+      if (!ctx) throw new Error('Failed to get 2D rendering context');
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, targetW, targetH);
+      ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+      bitmap.close();
+
+    } else {
+      // ── Alpha-First Path (PNG / WEBP / AVIF) ─────────────────────────────
+      // Step 1: Always initialize with alpha:true — we don't know yet if we need it.
+      // This is the "Alpha-First" principle: truth comes from the pixels, not the MIME type.
+      if (!canvas || currentAlpha !== true) {
+        canvas = new OffscreenCanvas(targetW, targetH);
+        ctx = canvas.getContext('2d', { alpha: true });
+        currentAlpha = true;
+      } else {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+      if (!ctx) throw new Error('Failed to get 2D rendering context');
+
+      ctx.clearRect(0, 0, targetW, targetH);
+      ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+      bitmap.close(); // Immediate GC trigger
+
+      // Step 2: Inspect actual pixel data to determine if alpha was needed.
+      // This check is now data-driven, not format-driven.
+      if (targetMime === 'image/png') {
+        const isTransparent = hasTransparentPixels(ctx, targetW, targetH);
+
+        if (!isTransparent) {
+          // ── Codec Awareness: Opaque PNG → WebP Upgrade ─────────────────
+          // The image has no transparent pixels → the alpha channel we allocated
+          // was pure waste. We now probe WebP to see if it's worth upgrading.
+
+          // @ts-ignore
+          const webpProbe = await canvas.convertToBlob({ type: 'image/webp', quality });
+
+          if (webpProbe.size < file.size * 0.40) {
+            // WebP is < 40% of original size → upgrade is worthwhile.
+            // Recreate canvas WITHOUT alpha to eliminate the wasted channel memory.
+            effectiveMime = 'image/webp';
             canvas = new OffscreenCanvas(targetW, targetH);
             ctx = canvas.getContext('2d', { alpha: false });
             currentAlpha = false;
-            if (!ctx) throw new Error("Failed to get 2D rendering context for WebP upgrade");
+            if (!ctx) throw new Error('Failed to get 2D rendering context for WebP upgrade');
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, targetW, targetH);
-            // Re-draw is necessary after context recreation
+            // Re-draw required after context recreation
             const bitmapRetry = await createImageBitmap(file);
             ctx.drawImage(bitmapRetry, 0, 0, targetW, targetH);
             bitmapRetry.close();
           }
+          // If WebP probe gain is insufficient, fall through with original PNG + alpha:true
+          // (alpha channel memory is a sunk cost at this point — no re-draw needed)
         }
+        // If transparent: alpha:true canvas is already the correct final state — no action needed.
       }
+      // For WEBP/AVIF inputs: alpha:true is always correct — no pixel inspection needed.
     }
 
     // Resilient Conversion Flow (With Fallbacks for AVIF/Edge formats)

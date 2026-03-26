@@ -3,7 +3,7 @@
  * OpticPress Compressor — Interaction Layer
  * Handles: drag & drop, file input, progress simulation, card selection
  */
-import JSZip from 'jszip';
+// JSZip has been moved to zip.worker.js — zero zip dependency on the Main Thread.
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -696,7 +696,7 @@ const uploader = new OpticFileQueue({
  * @property {HTMLElement | null} btn
  * @property {OpticFileQueue} sourceQueue
  * @property {OpticDB} db
- * @property {any} JSZip
+ * @property {string | URL} zipWorkerUrl
  * @property {function(string, string=): void} [showToast]
  */
 
@@ -708,7 +708,7 @@ class OpticExporter {
     this.btn = config.btn;
     this.sourceQueue = config.sourceQueue;
     this.db = config.db;
-    this.JSZip = config.JSZip;
+    this.zipWorkerUrl = config.zipWorkerUrl;
     // @ts-ignore
     this.showToast = config.showToast || window.showToast || ((m, t) => console.log(`[Toast ${t}] ${m}`));
 
@@ -726,19 +726,15 @@ class OpticExporter {
       return;
     }
 
-    if (!this.JSZip) {
-      console.error('[Optic Exporter] JSZip not injected.');
-      this.showToast('Oops, zip packaging is not available.', 'error');
-      return;
-    }
-
-    // ── Chunked ZIP to avoid ArrayBuffer OOM on large batches ────────
-    // Elena's Rigor: Dynamic chunk size (200MB on mobile vs 800MB on desktop)
+    // ── Chunked ZIP Worker Dispatch ─────────────────────────────────────────
+    // ZIP generation happens entirely in zip.worker.js — the Main Thread
+    // receives only a completed Blob and triggers the <a>.click() download.
+    // This keeps the UI at 60fps even while packaging hundreds of images.
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const MAX_CHUNK_BYTES = (isMobile ? 200 : 800) * 1024 * 1024; 
+    const MAX_CHUNK_BYTES = (isMobile ? 200 : 800) * 1024 * 1024;
     const folderName = this.sourceQueue.zipFolderName || 'photos';
 
-    // Split files into chunks by cumulative blob size
+    // Split stats into chunks by cumulative compressed size
     const chunks = [];
     let current = [], currentSize = 0;
     for (const f of stats) {
@@ -759,47 +755,42 @@ class OpticExporter {
     try {
       for (let i = 0; i < totalChunks; i++) {
         const chunk = chunks[i];
-        const partLabel = totalChunks > 1 ? `_parte${i + 1}de${totalChunks}` : '';
 
         this.btn.innerHTML = `
           <span class="material-symbols-outlined animate-spin" data-icon="sync" style="font-variation-settings: 'FILL' 0;">sync</span>
           <span>Zipping ${totalChunks > 1 ? `part ${i + 1}/${totalChunks}` : `${chunk.length} files`}...</span>
         `;
 
-        const zip = new this.JSZip();
-        
-        // Sequentially hydrate RAM with blobs from disk to prevent OOM
-        let loaded = 0;
-        for (const stat of chunk) {
-          const record = await this.db.getFile(stat.id);
-          if (record && record.blob) {
-            // Anti Zip-Slip: Remove path traversal or malicious directory injection via file API
-            const safeName = record.filename.replace(/^.*[\\\/:]/, '').replace(/\.[^.]+$/, '');
-            // Alpha Intelligence: use the actual MIME type stored, never hardcode .jpeg
-            /** @type {Record<string, string>} */
-            const mimeToExt = { 'image/jpeg': 'jpeg', 'image/webp': 'webp', 'image/png': 'png', 'image/avif': 'avif' };
-            const ext = mimeToExt[stat.mime] || mimeToExt[record.blob.type] || 'jpeg';
-            zip.file(`${safeName}.${ext}`, record.blob);
-          }
-          loaded++;
-          if (loaded % 25 === 0) await new Promise(r => setTimeout(r, 0)); // yield loop
-        }
+        // Dispatch to Zip Worker — blocking zip.generateAsync() runs off-thread
+        const chunkBlob = await new Promise((resolve, reject) => {
+          const zipWorker = new Worker(this.zipWorkerUrl, { type: 'module' });
+          zipWorker.onmessage = (/** @type {MessageEvent} */ e) => {
+            zipWorker.terminate();
+            if (e.data.error) {
+              reject(new Error(e.data.error));
+            } else {
+              resolve(e.data.chunkBlob);
+            }
+          };
+          zipWorker.onerror = (err) => {
+            zipWorker.terminate();
+            reject(err);
+          };
+          zipWorker.postMessage({ stats: chunk, folderName, chunkIndex: i, totalChunks });
+        });
 
-        await Promise.resolve(); // yield to browser before heavy generation
-
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-
+        const partLabel = totalChunks > 1 ? `_parte${i + 1}de${totalChunks}` : '';
         const anchor = document.createElement('a');
-        anchor.href = URL.createObjectURL(zipBlob);
+        anchor.href = URL.createObjectURL(/** @type {Blob} */ (chunkBlob));
         anchor.download = `${folderName}${partLabel}.zip`;
         anchor.click();
 
-        // Free memory immediately before generating next chunk
+        // Revoke URL after a short delay to ensure the download starts
         setTimeout(() => URL.revokeObjectURL(anchor.href), 3000);
 
-        // Small pause between chunks to let browser release memory
+        // Brief pause between chunks so the browser can release memory
         if (i < totalChunks - 1) {
-          chunk.length = 0; // Clear chunk references
+          current.length = 0;
           await new Promise(r => setTimeout(r, 1000));
         }
       }
@@ -808,12 +799,12 @@ class OpticExporter {
         ? `Finished downloading ${totalChunks} folders (${stats.length} images).`
         : `All done! Downloading ${stats.length} images.`;
       this.showToast(msg);
-      
-      // Clear RAM & DB after fully downloading
+
+      // Clear IDB after all chunks are downloaded
       this.db.clear().catch(console.error);
 
     } catch (err) {
-      console.error('[Optic Uploader] Batch Download Failed', err);
+      console.error('[Optic Exporter] Batch Download Failed', err);
       this.showToast('Sorry, we failed to generate your ZIP.', 'error');
     } finally {
       this.btn.classList.remove('is-zipping');
@@ -827,7 +818,7 @@ const exporter = new OpticExporter({
   btn: downloadAllBtn,
   sourceQueue: uploader,
   db: db,
-  JSZip: JSZip,
+  zipWorkerUrl: new URL('../workers/zip.worker.js', import.meta.url),
   showToast: typeof showToast === 'function' ? showToast : undefined
 });
 
