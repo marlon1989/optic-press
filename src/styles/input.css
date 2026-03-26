@@ -78,4 +78,10 @@
     @apply outline outline-4 outline-primary ring-0 shadow-lg bg-primary-container;
     border-color: transparent;
   }
+
+  /* CSP-Safe Icon Variant: replaces style="font-variation-settings: 'FILL' 0;"
+     Inline style attributes require 'unsafe-hashes' in style-src; a CSS class does not. */
+  .icon-outline {
+    font-variation-settings: 'FILL' 0;
+  }
 }

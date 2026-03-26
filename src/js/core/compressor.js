@@ -757,7 +757,7 @@ class OpticExporter {
         const chunk = chunks[i];
 
         this.btn.innerHTML = `
-          <span class="material-symbols-outlined animate-spin" data-icon="sync" style="font-variation-settings: 'FILL' 0;">sync</span>
+          <span class="material-symbols-outlined animate-spin icon-outline" data-icon="sync">sync</span>
           <span>Zipping ${totalChunks > 1 ? `part ${i + 1}/${totalChunks}` : `${chunk.length} files`}...</span>
         `;
 
