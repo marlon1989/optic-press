@@ -180,7 +180,7 @@ class OpticUI {
           </div>
         </div>
         <div class="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden mb-2">
-           <div class="bg-primary h-full transition-all duration-300" id="global-fill" style="width: 0%"></div>
+           <div class="bg-primary h-full transition-all duration-300" id="global-fill"></div>
         </div>
         <div class="flex justify-between text-xs text-on-surface-variant font-medium">
            <span id="global-count-text">0 / ${totalCount}</span>
