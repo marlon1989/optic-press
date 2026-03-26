@@ -1,4 +1,5 @@
 // @ts-check
+/// <reference path="../types.d.ts" />
 /**
  * OpticPress Zip Worker — Off-Thread ZIP Packaging Engine
  *

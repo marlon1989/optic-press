@@ -1,4 +1,5 @@
 // @ts-check
+/// <reference path="../types.d.ts" />
 /**
  * OpticPress Worker — Image Compression Engine
  * Runs completely isolated from the Main Thread (No DOM access)

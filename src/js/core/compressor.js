@@ -1,4 +1,5 @@
 // @ts-check
+/// <reference path="../types.d.ts" />
 /**
  * OpticPress Compressor — Interaction Layer
  * Handles: drag & drop, file input, progress simulation, card selection
