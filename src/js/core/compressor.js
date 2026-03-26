@@ -441,7 +441,7 @@ class OpticFileQueue {
       const showToast = this.config.showToast || window.showToast || ((message, type = 'info') => console.log(`[Toast ${type}] ${message}`));
 
       if (!this.ALLOWED_TYPES.has(file.type)) {
-        showToast(`Oops! We don't support this format: ${file.name}`, 'error');
+        showToast(`Unsupported file: ${file.name}. Currently, we only support WEBP, PNG, JPEG, and AVIF.`, 'error');
         return;
       }
       if (file.size > this.MAX_BYTES) {
@@ -807,51 +807,70 @@ const exporter = new OpticExporter({
  * @param {string} message
  * @param {string} type
  */
-function showToast(message, type = 'default') {
-  const existing = document.getElementById('optic-toast');
-  if (existing) existing.remove();
+/**
+ * OpticPress Premium Toast Notification System
+ * Implements glassmorphism, SVG icons, and smooth physics-based animations.
+ * @param {string} message 
+ * @param {string} [type] 
+ */
+function showToast(message, type = 'info') {
+  const container = document.getElementById('optic-toast-container') || (() => {
+    const c = document.createElement('div');
+    c.id = 'optic-toast-container';
+    document.body.appendChild(c);
+    return c;
+  })();
+
+  // Clear existing to avoid stacking (maintained UX choice for this layout)
+  container.innerHTML = '';
 
   const toast = document.createElement('div');
-  toast.id = 'optic-toast';
+  const typeClass = `optic-toast-${['success', 'error', 'warning', 'info'].includes(type) ? type : 'info'}`;
+  toast.className = `optic-toast ${typeClass}`;
+  
+  // Icon Mapping (Heroicons Outline)
+  const icons = {
+    success: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>`,
+    error: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>`,
+    warning: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>`,
+    info: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>`
+  };
 
-  const bg    = type === 'error'   ? 'var(--error-container)'    :
-                type === 'warning' ? '#fef3c7'                    : 'var(--inverse-surface)';
-  const color = type === 'error'   ? 'var(--error)'              :
-                type === 'warning' ? '#92400e'                    : 'var(--inverse-on-surface)';
+  const icon = icons[/** @type {keyof typeof icons} */ (type)] || icons.info;
 
-  toast.style.cssText = `
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(8px);
-    background: ${bg};
-    color: ${color};
-    padding: 0.625rem 1.125rem;
-    border-radius: 0.375rem;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    white-space: nowrap;
-    box-shadow: 0 0 24px rgba(43,52,55,0.12);
-    z-index: 999;
-    opacity: 0;
-    transition: opacity 200ms ease, transform 200ms ease;
-    pointer-events: none;
+  toast.innerHTML = `
+    <div class="flex-shrink-0">${icon}</div>
+    <span class="text-sm font-semibold tracking-wide whitespace-normal sm:whitespace-nowrap">${message}</span>
+    <div class="optic-toast-progress"></div>
   `;
 
-  toast.textContent = message;
-  document.body.appendChild(toast);
+  container.appendChild(toast);
 
+  // Animate In: Force reflow for transition
   requestAnimationFrame(() => {
-    toast.style.opacity = '1';
-    toast.style.transform = 'translateX(-50%) translateY(0)';
+    toast.classList.add('is-visible');
   });
 
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateX(-50%) translateY(8px)';
-    setTimeout(() => toast.remove(), 220);
-  }, 2800);
+  // Auto-Dismiss
+  const cleanup = () => {
+    toast.classList.remove('is-visible');
+    setTimeout(() => toast.remove(), 500);
+  };
+
+  const timer = setTimeout(cleanup, 3000);
+
+  // Pause on hover (Elite UX feature)
+  toast.onmouseenter = () => {
+    clearTimeout(timer);
+    const progress = toast.querySelector('.optic-toast-progress');
+    if (progress instanceof HTMLElement) progress.style.animationPlayState = 'paused';
+  };
+  
+  toast.onmouseleave = () => {
+    setTimeout(cleanup, 1000);
+    const progress = toast.querySelector('.optic-toast-progress');
+    if (progress instanceof HTMLElement) progress.style.animationPlayState = 'running';
+  };
 }
 
 // ── Nav active link tracking on scroll ──────────────────────────────
