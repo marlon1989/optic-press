@@ -21,7 +21,7 @@ build/
 .env.test.local
 .env.production.local
 .vercel
-.agent/
+.agents/
 .gemini/
 .vscode/
 
@@ -33,3 +33,4 @@ yarn-error.log*
 # Documentation (Private assets)
 docs/
 ui_ux_output.md
+skills-lock.json
