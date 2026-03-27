@@ -1,9 +1,9 @@
 // @ts-check
-/// <reference path="../types.d.ts" />
 /**
  * OpticPress Compressor — Interaction Layer
  * Handles: drag & drop, file input, progress simulation, card selection
  */
+import { escapeHTML } from './utils.js';
 // JSZip has been moved to zip.worker.js — zero zip dependency on the Main Thread.
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -840,7 +840,7 @@ function showToast(message, type = 'info') {
 
   toast.innerHTML = `
     <div class="flex-shrink-0">${icon}</div>
-    <span class="text-sm font-semibold tracking-wide whitespace-normal sm:whitespace-nowrap">${message}</span>
+    <span class="text-sm font-semibold tracking-wide whitespace-normal sm:whitespace-nowrap">${escapeHTML(message)}</span>
     <div class="optic-toast-progress"></div>
   `;
 

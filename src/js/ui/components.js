@@ -1,18 +1,9 @@
 // @ts-check
+import { escapeHTML } from '../core/utils.js';
 
 /**
- * @param {string | null} str
- * @returns {string}
+ * OpticPress Web Components
  */
-function escapeHTML(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
 
 class OpticResultCard extends HTMLElement {
   connectedCallback() {
