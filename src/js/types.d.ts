@@ -71,3 +71,38 @@ interface OpticExporterConfig {
   zipWorkerUrl: string | URL;
   showToast?: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
 }
+
+/**
+ * UTIF.js Types
+ * These definitions match the npm 'utif' module implementation.
+ */
+declare module 'utif' {
+  /**
+   * Decodes a TIFF/RAW buffer into a collection of IFDs (directories).
+   * @param buffer The ArrayBuffer containing binary data.
+   */
+  export function decode(buffer: ArrayBuffer | Uint8Array): any[];
+
+  /**
+   * Decodes pixel data for a specific IFD.
+   * Modifies the 'ifd' object in-place to include '.data' property.
+   * @param buffer The original ArrayBuffer containing pixel data.
+   * @param ifd The specific IFD object to decode.
+   * @param ifds The parent collection of IFDs (often required for LZW/Nikon compression).
+   */
+  export function decodeImage(buffer: ArrayBuffer | Uint8Array, ifd: any, ifds?: any[]): void;
+
+  /**
+   * Converts a decoded IFD into a standard RGBA8 Uint8Array.
+   * @param ifd The decoded IFD object (must have been processed by decodeImage).
+   */
+  export function toRGBA8(ifd: any): Uint8Array;
+
+  const UTIF: {
+    decode: typeof decode;
+    decodeImage: typeof decodeImage;
+    toRGBA8: typeof toRGBA8;
+  };
+
+  export default UTIF;
+}

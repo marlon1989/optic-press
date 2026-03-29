@@ -11,6 +11,10 @@
  * preventing heap spikes in the UI thread when many workers finish simultaneously.
  */
 
+// ── External Decoders (RAW) ───────────────────────────────────────────────────
+import UTIF from 'utif';
+// pako.js (optional but recommended for compressed TIFF features)
+
 // ── CompressionDB (True Worker-to-Disk Architecture) ──────────────────────────────
 // A lean IndexedDB client embedded directly in the Worker.
 // The Worker persists compressed Blobs to disk without crossing the
@@ -105,7 +109,124 @@ self.onmessage = async function(e) {
   const { id, file, quality, targetMime = 'image/jpeg' } = e.data;
   
   try {
-    const bitmap = await createImageBitmap(file);
+    /** @type {ImageBitmap} */
+    let bitmap;
+
+    const isNef = file.name && file.name.toLowerCase().endsWith('.nef');
+    if (isNef) {
+      // ── NEF RAW Pipeline: Sensor Fidelity Mode ─────────────────────────
+      const buffer = await file.arrayBuffer();
+      const ifds = UTIF.decode(buffer);
+      if (!ifds || ifds.length === 0) throw new Error("Could not decode NEF structure.");
+      
+      // Helper to safely extract single values from UTIF tags
+      /** @param {any} val */
+      const tagVal = (val) => (Array.isArray(val) || ArrayBuffer.isView(val)) ? /** @type {any} */ (val)[0] : val;
+
+      /** @type {any[]} */
+      let allIFDs = [];
+      /** @param {any} listOrIFD */
+      const collect = (listOrIFD) => {
+        if (!listOrIFD) return;
+        const items = Array.isArray(listOrIFD) ? listOrIFD : [listOrIFD];
+        for (const ifd of items) {
+          if (!ifd || typeof ifd !== 'object' || allIFDs.includes(ifd)) continue;
+          allIFDs.push(ifd);
+          // Recurse into all common TIFF/RAW sub-IFD structures
+          if (ifd.subIFD) collect(ifd.subIFD);
+          if (ifd.exifIFD) collect(ifd.exifIFD);
+          if (ifd.gpsIFD) collect(ifd.gpsIFD);
+          if (ifd.t34665) collect(ifd.t34665); // Exif IFD
+          if (ifd.t330) collect(ifd.t330);     // SubIFDs
+          if (ifd.makerNote) collect(ifd.makerNote); // Some MakerNotes are valid IFDs
+        }
+      };
+      collect(ifds);
+
+      let mainIFD = allIFDs[0];
+      let maxArea = 0;
+      let selectionMode = "Metadata (IFD0)";
+      let finalW = 0, finalH = 0;
+
+      for (let i = 0; i < allIFDs.length; i++) {
+        const ifd = allIFDs[i];
+        const compression = tagVal(ifd["t259"]) || 1;
+        const interpretation = tagVal(ifd["t262"]) || 2;
+        const w = Number(tagVal(ifd["t256"]) || tagVal(ifd["t40962"]) || ifd.width || 0);
+        const h = Number(tagVal(ifd["t257"]) || tagVal(ifd["t40963"]) || ifd.height || 0);
+        
+        const jpegOffset = tagVal(ifd["t513"]) || 0;
+        const jpegLength = tagVal(ifd["t514"]) || 0;
+        const stripOffset = tagVal(ifd["t273"]) || 0;
+        const stripLength = tagVal(ifd["t279"]) || 0;
+        
+        // Score logic
+        let score = 0;
+        const hasJpegPointer = (jpegOffset > 0 && jpegLength > 0) || (stripOffset > 0 && stripLength > 0);
+        const isJpegCompressed = (compression === 6 || compression === 7 || compression === 34713);
+
+        if (isJpegCompressed && hasJpegPointer) {
+          score = 4; // High-Resolution JPEG Preview (Trusted Stream Mode)
+        } else if (w > 0 && h > 0) {
+          if (compression === 6 || compression === 7) score = 3;      // JPEG with dimensions
+          else if (compression === 1 && interpretation === 2) score = 2; // Uncompressed RGB
+          else if ([0, 1, 2, 3, 5, 6].includes(interpretation)) score = 1; // Basic Raster
+        }
+
+        // Selection Tie-breaker
+        const currentBestScore = mainIFD._score || 0;
+        const currentBestArea = maxArea;
+        const currentBestOffset = mainIFD._jpegOffset || 0;
+
+        const isBetter = score > currentBestScore || 
+                        (score === currentBestScore && score === 4 && jpegOffset > currentBestOffset) ||
+                        (score === currentBestScore && score < 4 && (w * h) > currentBestArea);
+
+        if (score > 0 && isBetter) {
+           maxArea = w * h;
+           mainIFD = ifd;
+           mainIFD._score = score;
+           mainIFD._jpegOffset = jpegOffset || stripOffset;
+           finalW = w;
+           finalH = h;
+           selectionMode = score === 4 ? "JPEG Preview (Direct)" : (score === 3 ? "JPEG Preview" : (score === 2 ? "RGB Uncompressed" : "Generic Raster"));
+        }
+      }
+
+      console.log(`[Optic Worker] Selected NEF IFD: ${selectionMode} (${finalW}x${finalH})`);
+
+      // ── Extraction Logic ───────────────────────────────────────────────────
+      const compression = tagVal(mainIFD["t259"]);
+      const offset = tagVal(mainIFD.t513) || tagVal(mainIFD.t273);
+      const count = tagVal(mainIFD.t514) || tagVal(mainIFD.t279);
+
+      if ((compression === 6 || compression === 7 || compression === 34713) && offset && count) {
+         try {
+           const jpegData = new Uint8Array(buffer, offset, count);
+           const jpegBlob = new Blob([jpegData], { type: 'image/jpeg' });
+           bitmap = await createImageBitmap(jpegBlob);
+           // Update dimensions if they were 0 in metadata
+           if (finalW <= 0) finalW = bitmap.width;
+           if (finalH <= 0) finalH = bitmap.height;
+         } catch (e) {
+           console.warn("[Optic Worker] Fallback: Direct extraction failed, trying UTIF decode.", e);
+           UTIF.decodeImage(buffer, mainIFD, ifds);
+           const rgba = UTIF.toRGBA8(mainIFD);
+           const imageData = new ImageData(new Uint8ClampedArray(rgba), finalW || mainIFD.width, finalH || mainIFD.height);
+           bitmap = await createImageBitmap(imageData);
+         }
+      } else {
+        if (finalW <= 0 || finalH <= 0) throw new Error("Could not find valid dimensions for non-JPEG image.");
+        UTIF.decodeImage(buffer, mainIFD, ifds);
+        const rgba = UTIF.toRGBA8(mainIFD);
+        if (!rgba) throw new Error("UTIF failed to decode image data into RGBA.");
+        const clampedData = new Uint8ClampedArray(rgba);
+        const imageData = new ImageData(clampedData, finalW, finalH);
+        bitmap = await createImageBitmap(imageData);
+      }
+    } else {
+      bitmap = await createImageBitmap(file);
+    }
     
     // Pixel / Decompression bomb mitigation (~64 Megapixel hard limit)
     if (bitmap.width * bitmap.height > 64000000) {
@@ -114,21 +235,30 @@ self.onmessage = async function(e) {
     }
 
     // Adaptive downscaling (Maintains aspect ratio)
-    const MAX_DIMENSION = 2560;
+    // Both RAW and standard images now follow the 2560px optimized limit.
+    const WEB_MAX_DIMENSION = 2560;
+    const effectiveLimit = WEB_MAX_DIMENSION;
+
     let targetW = bitmap.width;
     let targetH = bitmap.height;
     
-    if (targetW > MAX_DIMENSION || targetH > MAX_DIMENSION) {
+    if (targetW > effectiveLimit || targetH > effectiveLimit) {
       if (targetW > targetH) {
-        targetH = Math.round((targetH * MAX_DIMENSION) / targetW);
-        targetW = MAX_DIMENSION;
+        targetH = Math.round((targetH * effectiveLimit) / targetW);
+        targetW = effectiveLimit;
       } else {
-        targetW = Math.round((targetW * MAX_DIMENSION) / targetH);
-        targetH = MAX_DIMENSION;
+        targetW = Math.round((targetW * effectiveLimit) / targetH);
+        targetH = effectiveLimit;
       }
     }
 
     let effectiveMime = targetMime;
+    // ── RAW/NEF Normalization ──────────────────────────────────────────
+    // Browsers fallback to PNG for unknown MIME types like image/x-nikon-nef.
+    // We force RAW files to optimize into JPEG (default) or WebP.
+    if (isNef && (effectiveMime.includes('nef') || !effectiveMime)) {
+       effectiveMime = 'image/jpeg';
+    }
 
     if (targetMime === 'image/jpeg') {
       // ── JPEG Path: alpha is never needed ─────────────────────────────────

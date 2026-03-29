@@ -267,7 +267,7 @@ class OpticFileQueue {
     // Clear DB on start to prevent leftover space usage
     this.db.clear().catch(console.error);
     /** @type {Set<string>} */
-    this.ALLOWED_TYPES = new Set(['image/webp', 'image/png', 'image/jpeg', 'image/avif']);
+    this.ALLOWED_TYPES = new Set(['image/webp', 'image/png', 'image/jpeg', 'image/avif', 'image/x-nikon-nef', 'image/nef']);
     /** @type {number} */
     this.totalOriginalBytes = 0;
     /** @type {number} */
@@ -440,8 +440,9 @@ class OpticFileQueue {
       // @ts-ignore
       const showToast = this.config.showToast || window.showToast || ((message, type = 'info') => console.log(`[Toast ${type}] ${message}`));
 
-      if (!this.ALLOWED_TYPES.has(file.type)) {
-        showToast(`Unsupported file: ${file.name}. Currently, we only support WEBP, PNG, JPEG, and AVIF.`, 'error');
+      const isNef = file.name.toLowerCase().endsWith('.nef');
+      if (!this.ALLOWED_TYPES.has(file.type) && !isNef) {
+        showToast(`Unsupported file: ${file.name}. Currently, we only support WEBP, PNG, JPEG, AVIF and NEF.`, 'error');
         return;
       }
       if (file.size > this.MAX_BYTES) {
@@ -525,7 +526,7 @@ class OpticFileQueue {
 
     const workers = [];
     for(let i=0; i<poolSize; i++){
-      workers.push(new Worker(this.workerUrl));
+      workers.push(new Worker(this.workerUrl, { type: 'module' }));
     }
 
     let processedCount = 0;
