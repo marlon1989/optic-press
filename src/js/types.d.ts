@@ -15,6 +15,21 @@ interface ProcessedFileStat {
   mime: string;
 }
 
+type ToastType = 'info' | 'success' | 'warning' | 'error';
+
+interface OpticFileQueueLike {
+  processedFileStats: ProcessedFileStat[];
+  zipFolderName: string | null;
+}
+
+interface OpticStorage {
+  clear(): Promise<void>;
+}
+
+interface Window {
+  showToast?: (message: string, type?: ToastType) => void;
+}
+
 /**
  * Configuration for the OpticUI manager.
  */
@@ -66,10 +81,10 @@ interface WorkerResultError {
  */
 interface OpticExporterConfig {
   btn: HTMLElement | null;
-  sourceQueue: any; // Circular dependency with OpticFileQueue avoided here
-  db: any;
+  sourceQueue: OpticFileQueueLike;
+  db: OpticStorage;
   zipWorkerUrl: string | URL;
-  showToast?: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
+  showToast?: (message: string, type?: ToastType) => void;
 }
 
 /**

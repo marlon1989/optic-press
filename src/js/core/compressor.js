@@ -3,13 +3,17 @@
  * OpticPress Compressor — Interaction Layer
  * Handles: drag & drop, file input, progress simulation, card selection
  */
-import { escapeHTML } from './utils.js';
+import {
+  BATCH_FILE_LIMIT,
+  FILE_SIZE_LIMIT_BYTES,
+  collectAcceptedImageFiles,
+  getFolderNameFromRelativePath,
+} from './file-rules.js';
+import { OpticDB } from './optic-db.js';
+import { OpticExporter } from './exporter.js';
+import { OpticUI } from '../ui/progress.js';
+import { showToast } from '../ui/toast.js';
 // JSZip has been moved to zip.worker.js — zero zip dependency on the Main Thread.
-
-// ── Constants ────────────────────────────────────────────────────────
-
-/** @type {number} */
-const FAKE_PROGRESS_DURATION = 3200; // ms for the demo progress bar
 
 // ── DOM References ───────────────────────────────────────────────────
 
@@ -18,220 +22,14 @@ const dropZone = document.getElementById('drop-zone');
 /** @type {HTMLInputElement | null} */
 const fileInput = /** @type {HTMLInputElement | null} */ (document.getElementById('file-input'));
 /** @type {HTMLElement | null} */
-const progressFill = document.getElementById('progress-fill');
-/** @type {HTMLElement | null} */
-const progressPct = document.getElementById('progress-pct');
-/** @type {NodeListOf<Element>} */
-const resultCards = document.querySelectorAll('.result-card');
-/** @type {HTMLElement | null} */
 const downloadAllBtn = document.getElementById('download-all-btn');
 
 // ── Core Compression Engine (Moved to js/worker.js) ────────────
 // The main thread now merely dispatches jobs to isolated Web Workers
 // to prevent browser freezes when handling 7k+ images.
 
-// ── IndexedDB Wrapper (RAM Eradication Engine) ──────────────────────
-
-// ── IndexedDB Wrapper (RAM Eradication Engine) ──────────────────────
-
-class OpticDB {
-  constructor() {
-    /** @type {string} */
-    this.dbName = 'OpticPressDB';
-    /** @type {number} */
-    this.version = 1;
-    /** @type {string} */
-    this.storeName = 'compressed';
-  }
-
-  /**
-   * @returns {Promise<IDBDatabase>}
-   */
-  async init() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.version);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-      request.onupgradeneeded = (e) => {
-        /** @type {IDBDatabase} */
-        // @ts-ignore
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          db.createObjectStore(this.storeName, { keyPath: 'id' });
-        }
-      };
-    });
-  }
-
-  /**
-   * @param {string | number} id
-   * @param {Blob} blob
-   * @param {string} filename
-   * @param {string} [mime]
-   * @returns {Promise<void>}
-   */
-  async putFile(id, blob, filename, mime = 'image/jpeg') {
-    const db = await this.init();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction([this.storeName], 'readwrite');
-      const store = tx.objectStore(this.storeName);
-      store.put({ id, blob, filename, mime });
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  }
-
-  /**
-   * @param {string} id
-   * @returns {Promise<{id: string, blob: Blob, filename: string}>}
-   */
-  async getFile(id) {
-    const db = await this.init();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction([this.storeName], 'readonly');
-      const store = tx.objectStore(this.storeName);
-      const req = store.get(id);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  }
-
-  /** @returns {Promise<void>} */
-  async clear() {
-    const db = await this.init();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction([this.storeName], 'readwrite');
-      const store = tx.objectStore(this.storeName);
-      store.clear();
-      tx.oncomplete = () => resolve();
-    });
-  }
-}
-
 const db = new OpticDB();
-
-// ── Drop Zone Architecture (File API) ────────────────────────────────
-
-// ── Drop Zone Architecture (File API) ────────────────────────────────
-
-class OpticUI {
-  /** @param {OpticUIConfig} config */
-  constructor(config) {
-    this.dropZone = config.dropZone;
-    this.activeSection = config.activeSection;
-    this.jobsList = config.jobsList;
-    this.countText = config.countText;
-    this.completedSection = config.completedSection;
-    this.completedStatsText = config.completedStatsText;
-    this.downloadBtnText = config.downloadBtnText;
-
-    this.globalProgressEl = null;
-
-    this.fillEl = null;
-    this.pctEl = null;
-    this.countEl = null;
-    this.speedEl = null;
-    this.timerEl = null;
-  }
-
-  /**
-   * @param {boolean} isDragging
-   */
-  setDragState(isDragging) {
-    if (!this.dropZone) return;
-    if (isDragging) this.dropZone.classList.add('is-dragover');
-    else this.dropZone.classList.remove('is-dragover');
-  }
-
-  /**
-   * @param {number} totalCount
-   */
-  showActive(totalCount) {
-    if (this.activeSection) {
-      this.activeSection.classList.remove('hidden');
-      this.activeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    if (this.countText) this.countText.textContent = `Processing ${totalCount} images...`;
-
-    if (!this.globalProgressEl && this.jobsList) {
-      this.jobsList.innerHTML = '';
-      this.globalProgressEl = document.createElement('div');
-      this.globalProgressEl.className = 'bg-surface-container-lowest p-6 rounded-xl ambient-shadow ghost-border mb-4 transition-all duration-500 ease-out hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/5 cursor-default';
-      this.globalProgressEl.innerHTML = `
-        <div class="flex justify-between mb-2">
-          <span class="font-semibold text-on-surface">Compressing your images</span>
-          <div class="flex items-center space-x-3">
-            <span class="font-mono text-sm font-medium bg-primary-container text-primary px-2 py-0.5 rounded shadow-sm opacity-0 transition-opacity duration-300" id="global-speed">⚡ 0 img/s</span>
-            <span class="font-mono text-sm text-on-surface-variant" id="global-timer">Warming up...</span>
-          </div>
-        </div>
-        <div class="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden mb-2">
-           <div class="bg-primary h-full transition-all duration-300" id="global-fill"></div>
-        </div>
-        <div class="flex justify-between text-xs text-on-surface-variant font-medium">
-           <span id="global-count-text">0 / ${totalCount}</span>
-           <span id="global-pct-text">0%</span>
-        </div>
-      `;
-      this.jobsList.appendChild(this.globalProgressEl);
-
-      this.fillEl = document.getElementById('global-fill');
-      this.pctEl = document.getElementById('global-pct-text');
-      this.countEl = document.getElementById('global-count-text');
-      this.speedEl = document.getElementById('global-speed');
-      this.timerEl = document.getElementById('global-timer');
-    }
-  }
-
-  /**
-   * @param {number} processedCount
-   * @param {number} totalCount
-   * @param {{speed?: number, timerLabel?: string}} speedInfo
-   */
-  updateProgress(processedCount, totalCount, speedInfo) {
-    const pct = Math.round((processedCount / totalCount) * 100);
-    if (this.fillEl) this.fillEl.style.width = `${pct}%`;
-    if (this.pctEl) this.pctEl.textContent = `${pct}%`;
-    if (this.countEl) this.countEl.textContent = `${processedCount} / ${totalCount}`;
-
-    if (speedInfo.speed && this.speedEl) {
-      this.speedEl.textContent = `⚡ ${speedInfo.speed} img/s`;
-      this.speedEl.style.opacity = '1';
-    }
-    if (speedInfo.timerLabel && this.timerEl) {
-      this.timerEl.textContent = speedInfo.timerLabel;
-    }
-  }
-
-  hideActive() {
-    if (this.countText) this.countText.textContent = `Processing 0 images in your queue`;
-    if (this.activeSection) this.activeSection.classList.add('hidden');
-    
-    if (this.globalProgressEl) {
-      this.globalProgressEl.remove();
-      this.globalProgressEl = null;
-    }
-  }
-
-  /**
-   * @param {number} totalSavedPct
-   * @param {string} savedMB
-   * @param {string} totalOptimizedMB
-   * @param {number} processedCount
-   */
-  showCompleted(totalSavedPct, savedMB, totalOptimizedMB, processedCount) {
-    if (this.completedSection) {
-      this.completedSection.classList.remove('hidden');
-      this.completedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (this.completedStatsText) {
-        this.completedStatsText.textContent = `You saved ${totalSavedPct}% of space! (${savedMB} MB total)`;
-      }
-      if (this.downloadBtnText) {
-        this.downloadBtnText.textContent = `Download All ${processedCount} Photos (${totalOptimizedMB} MB)`;
-      }
-    }
-  }
-}
+window.showToast = showToast;
 
 class OpticFileQueue {
   /**
@@ -240,7 +38,7 @@ class OpticFileQueue {
    * @param {HTMLInputElement | null} config.fileInput
    * @param {HTMLElement | null} [config.selectBtn]
    * @param {OpticUI} config.ui
-   * @param {function(string, string=): void} [config.showToast]
+   * @param {(message: string, type?: ToastType) => void} [config.showToast]
    * @param {OpticDB} config.db
    * @param {string | URL} config.workerUrl
    */
@@ -249,6 +47,7 @@ class OpticFileQueue {
     this.db = config.db;
     this.ui = config.ui;
     this.workerUrl = config.workerUrl;
+    this.showToast = config.showToast || showToast;
     /** @type {HTMLElement | null} */
     this.dropZone = config.dropZone;
     /** @type {HTMLInputElement | null} */
@@ -259,15 +58,8 @@ class OpticFileQueue {
     this.processedFileStats = []; // { id, filename, size } (RAM safe)
     /** @type {string | null} */
     this.zipFolderName = null; // detected source folder name for zip filename
-    /** @type {number} */
-    this.MAX_BYTES = 50 * 1024 * 1024; // 50MB limit matching HTML copy
-    /** @type {number} */
-    this.MAX_QUEUE_SIZE = 10000; // Hard limit against DOM/App memory exhaustion (DoS mitigation)
-    
     // Clear DB on start to prevent leftover space usage
     this.db.clear().catch(console.error);
-    /** @type {Set<string>} */
-    this.ALLOWED_TYPES = new Set(['image/webp', 'image/png', 'image/jpeg', 'image/avif', 'image/x-nikon-nef', 'image/nef']);
     /** @type {number} */
     this.totalOriginalBytes = 0;
     /** @type {number} */
@@ -392,7 +184,7 @@ class OpticFileQueue {
     const files = Array.from(target.files);
     // webkitRelativePath is populated when input has webkitdirectory or folder is selected
     if (files.length > 0 && files[0].webkitRelativePath) {
-      this.zipFolderName = files[0].webkitRelativePath.split('/')[0];
+      this.zipFolderName = getFolderNameFromRelativePath(files[0].webkitRelativePath);
     }
     
     this.processFiles(target.files);
@@ -433,37 +225,16 @@ class OpticFileQueue {
    */
   processFiles(fileList) {
     if (!fileList || (fileList instanceof FileList && fileList.length === 0) || (Array.isArray(fileList) && fileList.length === 0)) return;
-    /** @type {File[]} */
-    let validFiles = [];
-    Array.from(fileList).forEach(file => {
-      /** @type {(message: string, type?: 'info' | 'success' | 'warning' | 'error') => void} */
-      // @ts-ignore
-      const showToast = this.config.showToast || window.showToast || ((message, type = 'info') => console.log(`[Toast ${type}] ${message}`));
-
-      const isNef = file.name.toLowerCase().endsWith('.nef');
-      if (!this.ALLOWED_TYPES.has(file.type) && !isNef) {
-        showToast(`Unsupported file: ${file.name}. Currently, we only support WEBP, PNG, JPEG, AVIF and NEF.`, 'error');
-        return;
-      }
-      if (file.size > this.MAX_BYTES) {
-        showToast(`This file is a bit too large: ${file.name}`, 'error');
-        return;
-      }
-      validFiles.push(file);
+    const validFiles = collectAcceptedImageFiles(Array.from(fileList), {
+      existingQueueCount: this.queue.length,
+      maxBytes: FILE_SIZE_LIMIT_BYTES,
+      maxQueueSize: BATCH_FILE_LIMIT,
+      showToast: this.showToast,
     });
+    if (validFiles.length === 0) return;
 
-    if (validFiles.length > 0) {
-      if (this.queue.length + validFiles.length > this.MAX_QUEUE_SIZE) {
-        // @ts-ignore
-        const showToast = this.config.showToast || window.showToast;
-        if (typeof showToast === 'function') showToast(`For safety, we've limited your batch to ${this.MAX_QUEUE_SIZE} photos at once.`, 'warning');
-        validFiles = validFiles.slice(0, this.MAX_QUEUE_SIZE - this.queue.length);
-      }
-      if (validFiles.length > 0) {
-        this.queue.push(...validFiles);
-        this.startProcessing();
-      }
-    }
+    this.queue.push(...validFiles);
+    this.startProcessing();
   }
 
   /**
@@ -671,208 +442,14 @@ const uploader = new OpticFileQueue({
   workerUrl: new URL('../workers/worker.js', import.meta.url)
 });
 
-// ── Progress Bar Animation (Fake) Removed for Scale ────────────
-// Native accurate calculation is now used via the Worker dispatcher.
-
-
-
-// ── Download All (Batch Zip Generation) ──────────────────────────────────
-
-// ── Download All (Batch Zip Generation) ──────────────────────────────────
-
-class OpticExporter {
-  /**
-   * @param {OpticExporterConfig} config
-   */
-  constructor(config) {
-    this.btn = config.btn;
-    this.sourceQueue = config.sourceQueue;
-    this.db = config.db;
-    this.zipWorkerUrl = config.zipWorkerUrl;
-    // @ts-ignore
-    this.showToast = config.showToast || window.showToast || ((m, t) => console.log(`[Toast ${t}] ${m}`));
-
-    if (this.btn) {
-      this.btn.addEventListener('click', () => this.exportAll());
-    }
-  }
-
-  async exportAll() {
-    if (!this.btn || this.btn.classList.contains('is-zipping')) return;
-
-    const stats = this.sourceQueue.processedFileStats;
-    if (stats.length === 0) {
-      this.showToast('No images to zip.', 'error');
-      return;
-    }
-
-    // ── Chunked ZIP Worker Dispatch ─────────────────────────────────────────
-    // ZIP generation happens entirely in zip.worker.js — the Main Thread
-    // receives only a completed Blob and triggers the <a>.click() download.
-    // This keeps the UI at 60fps even while packaging hundreds of images.
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const MAX_CHUNK_BYTES = (isMobile ? 200 : 800) * 1024 * 1024;
-    const folderName = this.sourceQueue.zipFolderName || 'photos';
-
-    // Split stats into chunks by cumulative compressed size
-    const chunks = [];
-    let current = [], currentSize = 0;
-    for (const f of stats) {
-      if (currentSize + f.size > MAX_CHUNK_BYTES && current.length > 0) {
-        chunks.push(current);
-        current = [];
-        currentSize = 0;
-      }
-      current.push(f);
-      currentSize += f.size;
-    }
-    if (current.length > 0) chunks.push(current);
-
-    const totalChunks = chunks.length;
-    this.btn.classList.add('is-zipping');
-    const originalHtml = this.btn.innerHTML;
-
-    try {
-      for (let i = 0; i < totalChunks; i++) {
-        const chunk = chunks[i];
-
-        this.btn.innerHTML = `
-          <span class="material-symbols-outlined animate-spin icon-outline" data-icon="sync">sync</span>
-          <span>Zipping ${totalChunks > 1 ? `part ${i + 1}/${totalChunks}` : `${chunk.length} files`}...</span>
-        `;
-
-        // Dispatch to Zip Worker — blocking zip.generateAsync() runs off-thread
-        const chunkBlob = await new Promise((resolve, reject) => {
-          const zipWorker = new Worker(this.zipWorkerUrl);
-          zipWorker.onmessage = (/** @type {MessageEvent} */ e) => {
-            zipWorker.terminate();
-            if (e.data.error) {
-              reject(new Error(e.data.error));
-            } else {
-              resolve(e.data.chunkBlob);
-            }
-          };
-          zipWorker.onerror = (err) => {
-            zipWorker.terminate();
-            reject(err);
-          };
-          zipWorker.postMessage({ stats: chunk, folderName, chunkIndex: i, totalChunks });
-        });
-
-        const partLabel = totalChunks > 1 ? `_parte${i + 1}de${totalChunks}` : '';
-        const anchor = document.createElement('a');
-        anchor.href = URL.createObjectURL(/** @type {Blob} */ (chunkBlob));
-        anchor.download = `${folderName}${partLabel}.zip`;
-        anchor.click();
-
-        // Revoke URL after a short delay to ensure the download starts
-        setTimeout(() => URL.revokeObjectURL(anchor.href), 3000);
-
-        // Brief pause between chunks so the browser can release memory
-        if (i < totalChunks - 1) {
-          current.length = 0;
-          await new Promise(r => setTimeout(r, 1000));
-        }
-      }
-
-      const msg = totalChunks > 1
-        ? `Finished downloading ${totalChunks} folders (${stats.length} images).`
-        : `All done! Downloading ${stats.length} images.`;
-      this.showToast(msg);
-
-      // Clear IDB after all chunks are downloaded
-      this.db.clear().catch(console.error);
-
-    } catch (err) {
-      console.error('[Optic Exporter] Batch Download Failed', err);
-      this.showToast('Sorry, we failed to generate your ZIP.', 'error');
-    } finally {
-      this.btn.classList.remove('is-zipping');
-      this.btn.innerHTML = originalHtml;
-    }
-  }
-}
-
 // Initialize the Exporter Singleton
 const exporter = new OpticExporter({
   btn: downloadAllBtn,
   sourceQueue: uploader,
   db: db,
   zipWorkerUrl: new URL('../workers/zip.worker.js', import.meta.url),
-  showToast: typeof showToast === 'function' ? showToast : undefined
+  showToast
 });
-
-// ── Toast Notifications ──────────────────────────────────────────────
-
-/**
- * @param {string} message
- * @param {string} type
- */
-/**
- * OpticPress Premium Toast Notification System
- * Implements glassmorphism, SVG icons, and smooth physics-based animations.
- * @param {string} message 
- * @param {string} [type] 
- */
-function showToast(message, type = 'info') {
-  const container = document.getElementById('optic-toast-container') || (() => {
-    const c = document.createElement('div');
-    c.id = 'optic-toast-container';
-    document.body.appendChild(c);
-    return c;
-  })();
-
-  // Clear existing to avoid stacking (maintained UX choice for this layout)
-  container.innerHTML = '';
-
-  const toast = document.createElement('div');
-  const typeClass = `optic-toast-${['success', 'error', 'warning', 'info'].includes(type) ? type : 'info'}`;
-  toast.className = `optic-toast ${typeClass}`;
-  
-  // Icon Mapping (Heroicons Outline)
-  const icons = {
-    success: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>`,
-    error: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>`,
-    warning: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>`,
-    info: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>`
-  };
-
-  const icon = icons[/** @type {keyof typeof icons} */ (type)] || icons.info;
-
-  toast.innerHTML = `
-    <div class="flex-shrink-0">${icon}</div>
-    <span class="text-sm font-semibold tracking-wide whitespace-normal sm:whitespace-nowrap">${escapeHTML(message)}</span>
-    <div class="optic-toast-progress"></div>
-  `;
-
-  container.appendChild(toast);
-
-  // Animate In: Force reflow for transition
-  requestAnimationFrame(() => {
-    toast.classList.add('is-visible');
-  });
-
-  // Auto-Dismiss
-  const cleanup = () => {
-    toast.classList.remove('is-visible');
-    setTimeout(() => toast.remove(), 500);
-  };
-
-  const timer = setTimeout(cleanup, 3000);
-
-  // Pause on hover (Elite UX feature)
-  toast.onmouseenter = () => {
-    clearTimeout(timer);
-    const progress = toast.querySelector('.optic-toast-progress');
-    if (progress instanceof HTMLElement) progress.style.animationPlayState = 'paused';
-  };
-  
-  toast.onmouseleave = () => {
-    setTimeout(cleanup, 1000);
-    const progress = toast.querySelector('.optic-toast-progress');
-    if (progress instanceof HTMLElement) progress.style.animationPlayState = 'running';
-  };
-}
 
 // ── Nav active link tracking on scroll ──────────────────────────────
 

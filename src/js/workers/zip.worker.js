@@ -13,10 +13,11 @@
  * Posts:    { chunkBlob: Blob, filename: string, chunkIndex: number, totalChunks: number, error?: string }
  */
 
-// @ts-ignore
-self.importScripts('/js/vendor/jszip.min.js');
-// @ts-ignore
-const JSZip = self.JSZip;
+import JSZip from 'jszip';
+import {
+  resolveImageExtension,
+  sanitizeArchiveEntryBaseName,
+} from '../core/export-planner.js';
 
 // ── ZipWorkerDB (Shared IndexedDB client — same DB as compression worker) ─────────
 class ZipWorkerDB {
@@ -70,14 +71,6 @@ class ZipWorkerDB {
 
 const zipDB = new ZipWorkerDB();
 
-/** @type {Record<string, string>} */
-const MIME_TO_EXT = {
-  'image/jpeg': 'jpeg',
-  'image/webp': 'webp',
-  'image/png': 'png',
-  'image/avif': 'avif',
-};
-
 // ── Main Message Handler ──────────────────────────────────────────────────────
 
 self.onmessage = async function (e) {
@@ -92,12 +85,8 @@ self.onmessage = async function (e) {
     for (const stat of stats) {
       const record = await zipDB.getFile(stat.id);
       if (record && record.blob) {
-        // Anti Zip-Slip: sanitize filename to prevent path traversal injection
-        const safeName = record.filename
-          .replace(/^.*[\\/:]/, '')   // strip any leading path
-          .replace(/\.[^.]+$/, '');   // strip extension (we re-add from MIME)
-
-        const ext = MIME_TO_EXT[stat.mime] || MIME_TO_EXT[record.blob.type] || 'jpeg';
+        const safeName = sanitizeArchiveEntryBaseName(record.filename);
+        const ext = resolveImageExtension(stat.mime, record.blob.type);
         zip.file(`${safeName}.${ext}`, record.blob);
       }
 
