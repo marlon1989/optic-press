@@ -272,7 +272,6 @@ self.onmessage = async function(e) {
 
       ctx.clearRect(0, 0, targetW, targetH);
       ctx.drawImage(bitmap, 0, 0, targetW, targetH);
-      bitmap.close(); // Immediate GC trigger
 
       // Step 2: Inspect actual pixel data to determine if alpha was needed.
       // This check is now data-driven, not format-driven.
@@ -297,10 +296,7 @@ self.onmessage = async function(e) {
             if (!ctx) throw new Error('Failed to get 2D rendering context for WebP upgrade');
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, targetW, targetH);
-            // Re-draw required after context recreation
-            const bitmapRetry = await createImageBitmap(file);
-            ctx.drawImage(bitmapRetry, 0, 0, targetW, targetH);
-            bitmapRetry.close();
+            ctx.drawImage(bitmap, 0, 0, targetW, targetH);
           }
           // If WebP probe gain is insufficient, fall through with original PNG + alpha:true
           // (alpha channel memory is a sunk cost at this point — no re-draw needed)
@@ -308,6 +304,7 @@ self.onmessage = async function(e) {
         // If transparent: alpha:true canvas is already the correct final state — no action needed.
       }
       // For WEBP/AVIF inputs: alpha:true is always correct — no pixel inspection needed.
+      bitmap.close();
     }
 
     // Resilient Conversion Flow (With Fallbacks for AVIF/Edge formats)
