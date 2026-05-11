@@ -83,7 +83,7 @@ interface OpticExporterConfig {
   btn: HTMLElement | null;
   sourceQueue: OpticFileQueueLike;
   db: OpticStorage;
-  zipWorkerUrl: string | URL;
+  createZipWorker: () => Worker;
   showToast?: (message: string, type?: ToastType) => void;
 }
 

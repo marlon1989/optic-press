@@ -40,13 +40,13 @@ class OpticFileQueue {
    * @param {OpticUI} config.ui
    * @param {(message: string, type?: ToastType) => void} [config.showToast]
    * @param {OpticDB} config.db
-   * @param {string | URL} config.workerUrl
+   * @param {() => Worker} config.createWorker
    */
   constructor(config) {
     this.config = config;
     this.db = config.db;
     this.ui = config.ui;
-    this.workerUrl = config.workerUrl;
+    this.createWorker = config.createWorker;
     this.showToast = config.showToast || showToast;
     /** @type {HTMLElement | null} */
     this.dropZone = config.dropZone;
@@ -297,7 +297,7 @@ class OpticFileQueue {
 
     const workers = [];
     for(let i=0; i<poolSize; i++){
-      workers.push(new Worker(this.workerUrl, { type: 'module' }));
+      workers.push(this.createWorker());
     }
 
     let processedCount = 0;
@@ -439,7 +439,7 @@ const uploader = new OpticFileQueue({
   ui: uiManager,
   showToast: typeof showToast === 'function' ? showToast : undefined,
   db: db,
-  workerUrl: new URL('../workers/worker.js', import.meta.url)
+  createWorker: createCompressionWorker
 });
 
 // Initialize the Exporter Singleton
@@ -447,9 +447,19 @@ const exporter = new OpticExporter({
   btn: downloadAllBtn,
   sourceQueue: uploader,
   db: db,
-  zipWorkerUrl: new URL('../workers/zip.worker.js', import.meta.url),
+  createZipWorker,
   showToast
 });
+
+/** @returns {Worker} */
+function createCompressionWorker() {
+  return new Worker(new URL('../workers/worker.js', import.meta.url), { type: 'module' });
+}
+
+/** @returns {Worker} */
+function createZipWorker() {
+  return new Worker(new URL('../workers/zip.worker.js', import.meta.url), { type: 'module' });
+}
 
 // ── Nav active link tracking on scroll ──────────────────────────────
 

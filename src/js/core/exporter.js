@@ -19,7 +19,7 @@ export class OpticExporter {
     this.btn = config.btn;
     this.sourceQueue = config.sourceQueue;
     this.db = config.db;
-    this.zipWorkerUrl = config.zipWorkerUrl;
+    this.createZipWorker = config.createZipWorker;
     this.showToast = config.showToast || fallbackToast;
 
     if (this.btn) this.btn.addEventListener('click', () => this.exportAll());
@@ -90,7 +90,7 @@ export class OpticExporter {
    */
   createZipBlob(chunk, folderName, chunkIndex, totalChunks) {
     return new Promise((resolve, reject) => {
-      const zipWorker = new Worker(this.zipWorkerUrl, { type: 'module' });
+      const zipWorker = this.createZipWorker();
       zipWorker.onmessage = (event) => {
         zipWorker.terminate();
         if (event.data.error) reject(new Error(event.data.error));

@@ -78,4 +78,16 @@ test('production build emits CSS bundle with critical Tailwind layout utilities'
   assert.match(cssText, /\.max-w-7xl\{max-width:80rem\}/, 'Expected page max-width utility');
   assert.match(cssText, /\.text-center\{text-align:center\}/, 'Expected centered hero utility');
   assert.match(cssText, /\.rounded-full\{border-radius:/, 'Expected rounded button utility');
+
+  const assetFiles = await readdir(new URL('../dist/assets/', import.meta.url));
+  const workerFiles = assetFiles.filter((fileName) => /(?:^worker-|^zip\.worker-).+\.js$/.test(fileName));
+  assert.equal(workerFiles.length, 2, 'Expected production build to emit both worker bundles');
+
+  const workerTexts = await Promise.all(
+    workerFiles.map((fileName) => readFile(join(projectRoot, 'dist/assets', fileName), 'utf8')),
+  );
+  for (const workerText of workerTexts) {
+    assert.doesNotMatch(workerText, /import\s+[^;]+['"](?:utif|jszip)['"]/, 'Worker dependencies must be bundled');
+    assert.doesNotMatch(workerText, /\.\.\/core\/export-planner\.js/, 'Worker helper modules must be bundled');
+  }
 });
