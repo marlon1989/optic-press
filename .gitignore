@@ -33,6 +33,8 @@ yarn-error.log*
 layout-smoke.png
 
 # Documentation (Private assets)
+AGENTS.md
+SKILL.md
 docs/
 ui_ux_output.md
 skills-lock.json
