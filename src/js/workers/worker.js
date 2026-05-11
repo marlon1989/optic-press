@@ -14,6 +14,10 @@
 // ── External Decoders (RAW) ───────────────────────────────────────────────────
 import UTIF from 'utif';
 import { hasTransparentPixels } from './image-analysis.js';
+import {
+  isNefFile,
+  resolveEffectiveMime,
+} from './mime.js';
 // pako.js (optional but recommended for compressed TIFF features)
 
 // ── CompressionDB (True Worker-to-Disk Architecture) ──────────────────────────────
@@ -92,7 +96,7 @@ self.onmessage = async function(e) {
     /** @type {ImageBitmap} */
     let bitmap;
 
-    const isNef = file.name && file.name.toLowerCase().endsWith('.nef');
+    const isNef = isNefFile(file.name || '');
     if (isNef) {
       // ── NEF RAW Pipeline: Sensor Fidelity Mode ─────────────────────────
       const buffer = await file.arrayBuffer();
@@ -232,15 +236,9 @@ self.onmessage = async function(e) {
       }
     }
 
-    let effectiveMime = targetMime;
-    // ── RAW/NEF Normalization ──────────────────────────────────────────
-    // Browsers fallback to PNG for unknown MIME types like image/x-nikon-nef.
-    // We force RAW files to optimize into JPEG (default) or WebP.
-    if (isNef && (effectiveMime.includes('nef') || !effectiveMime)) {
-       effectiveMime = 'image/jpeg';
-    }
+    let effectiveMime = resolveEffectiveMime(file.name || '', targetMime);
 
-    if (targetMime === 'image/jpeg') {
+    if (effectiveMime === 'image/jpeg') {
       // ── JPEG Path: alpha is never needed ─────────────────────────────────
       if (!canvas || currentAlpha !== false) {
         canvas = new OffscreenCanvas(targetW, targetH);
@@ -275,7 +273,7 @@ self.onmessage = async function(e) {
 
       // Step 2: Inspect actual pixel data to determine if alpha was needed.
       // This check is now data-driven, not format-driven.
-      if (targetMime === 'image/png') {
+      if (effectiveMime === 'image/png') {
         const isTransparent = hasTransparentPixels(ctx, targetW, targetH);
 
         if (!isTransparent) {
