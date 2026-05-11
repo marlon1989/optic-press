@@ -6,7 +6,8 @@ node_modules/
 # Testing
 coverage/
 test_compression.py
-tests/
+tests/*
+!tests/*.test.js
 
 # Production
 dist/
@@ -29,6 +30,7 @@ build/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+layout-smoke.png
 
 # Documentation (Private assets)
 docs/
