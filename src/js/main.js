@@ -1,4 +1,3 @@
-import '../styles/input.css';
 import './ui/theme.js';
 import './ui/components.js';
 import './core/compressor.js';
