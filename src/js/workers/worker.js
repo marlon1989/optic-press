@@ -13,6 +13,7 @@
 
 // ── External Decoders (RAW) ───────────────────────────────────────────────────
 import UTIF from 'utif';
+import { hasTransparentPixels } from './image-analysis.js';
 // pako.js (optional but recommended for compressed TIFF features)
 
 // ── CompressionDB (True Worker-to-Disk Architecture) ──────────────────────────────
@@ -80,27 +81,6 @@ let canvas = null;
 let ctx = null;
 /** @type {boolean | null} */
 let currentAlpha = null;
-
-// ── Alpha-First Pixel Inspector ───────────────────────────────────────────────
-
-/**
- * Inspects pixel data to determine if ANY alpha channel value < 255 exists.
- * Called AFTER drawing the bitmap, so the check is grounded in real pixel data.
- *
- * @param {OffscreenCanvasRenderingContext2D} context
- * @param {number} w
- * @param {number} h
- * @returns {boolean} true if the image contains at least one semi-transparent pixel
- */
-function hasTransparentPixels(context, w, h) {
-  const imageData = context.getImageData(0, 0, w, h);
-  const data = imageData.data;
-  // Alpha channel is every 4th byte (index 3, 7, 11, ...)
-  for (let i = 3; i < data.length; i += 4) {
-    if (data[i] < 255) return true;
-  }
-  return false;
-}
 
 // ── Main Message Handler ──────────────────────────────────────────────────────
 
