@@ -5,9 +5,7 @@ import {
   formatZipFilename,
   normalizeZipFolderName,
 } from './export-planner.js';
-
-const MOBILE_ZIP_CHUNK_MB = 200;
-const DESKTOP_ZIP_CHUNK_MB = 800;
+import { getMaxZipChunkBytes } from './zip-limits.js';
 
 /**
  * Batch ZIP export controller.
@@ -35,7 +33,7 @@ export class OpticExporter {
     }
 
     const folderName = normalizeZipFolderName(this.sourceQueue.zipFolderName);
-    const chunks = createZipChunks(stats, getMaxChunkBytes());
+    const chunks = createZipChunks(stats, getMaxZipChunkBytes());
     await this.exportChunks(chunks, folderName, stats.length);
   }
 
@@ -103,13 +101,6 @@ export class OpticExporter {
       zipWorker.postMessage({ stats: chunk, folderName, chunkIndex, totalChunks });
     });
   }
-}
-
-/** @returns {number} */
-function getMaxChunkBytes() {
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  const chunkMB = isMobile ? MOBILE_ZIP_CHUNK_MB : DESKTOP_ZIP_CHUNK_MB;
-  return chunkMB * 1024 * 1024;
 }
 
 /**
