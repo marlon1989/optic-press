@@ -55,6 +55,7 @@ class OpticThemeManager {
     if (!this.dropdown) return;
     const isHidden = this.dropdown.classList.contains('hidden');
     if (isHidden) {
+      this.dropdown.classList.add('flex', 'flex-col');
       this.dropdown.classList.remove('hidden');
     } else {
       this.closeDropdown();
@@ -63,6 +64,7 @@ class OpticThemeManager {
 
   closeDropdown() {
     if (this.dropdown) {
+      this.dropdown.classList.remove('flex', 'flex-col');
       this.dropdown.classList.add('hidden');
     }
   }
