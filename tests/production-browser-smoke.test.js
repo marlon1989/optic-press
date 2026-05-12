@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
-import { access, mkdtemp, rm, stat } from 'node:fs/promises';
+import { access, mkdtemp, open, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,7 @@ import test from 'node:test';
 const execFileAsync = promisify(execFile);
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const browserLockPath = join(tmpdir(), 'opticpress-browser-smoke.lock');
 const commonViewports = [
   { name: 'mobile-small', width: 360, height: 640 },
   { name: 'mobile-modern', width: 390, height: 844 },
@@ -33,6 +34,7 @@ test('production build opens dist/index.html in common browser viewports', { tim
   const port = 6200 + (process.pid % 1000);
   const workspace = await mkdtemp(join(tmpdir(), 'opticpress-smoke-'));
   const distRoot = join(workspace, 'dist');
+  const browserLock = await acquireBrowserLock();
 
   await execFileAsync(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--outDir', distRoot], {
     cwd: projectRoot,
@@ -79,9 +81,30 @@ test('production build opens dist/index.html in common browser viewports', { tim
     }
   } finally {
     server.kill();
+    await releaseBrowserLock(browserLock);
     await rm(workspace, { recursive: true, force: true });
   }
 });
+
+async function acquireBrowserLock() {
+  const startTime = Date.now();
+  while (Date.now() - startTime < 120000) {
+    try {
+      const handle = await open(browserLockPath, 'wx');
+      await handle.writeFile(String(process.pid));
+      return handle;
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  throw new Error('Timed out waiting for browser smoke lock');
+}
+
+async function releaseBrowserLock(handle) {
+  await handle.close();
+  await rm(browserLockPath, { force: true });
+}
 
 /** @param {import('node:child_process').ChildProcessWithoutNullStreams} server */
 function waitForServer(server) {

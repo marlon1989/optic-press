@@ -6,22 +6,14 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
   <title>lume. | Instant Lightness</title>
   
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ZEJ2JfUQas7+vbx18al6a1LwlO8QyWd70zjnLdFCUQE=' https://va.vercel-scripts.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; worker-src 'self' blob: data:; child-src 'self' blob:; connect-src 'self' https://vitals.vercel-insights.com; object-src 'none'; base-uri 'self';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://va.vercel-scripts.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; worker-src 'self' blob: data:; child-src 'self' blob:; connect-src 'self' https://vitals.vercel-insights.com; object-src 'none'; base-uri 'self';" />
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="/favicon.png" />
+  <script src="/theme-bootstrap.js"></script>
   <link rel="stylesheet" href="/src/styles/input.css" />
-  
-  <script>
-    (function() {
-      const opticTheme = localStorage.getItem('optic_theme') || 'system';
-      if (opticTheme === 'dark' || (opticTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      }
-    })();
-  </script>
   
   <script type="module" src="/src/js/main.js"></script>
 </head>

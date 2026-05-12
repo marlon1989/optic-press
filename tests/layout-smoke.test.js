@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -58,21 +57,21 @@ test('source HTML has no conflicting Tailwind display utilities on one element',
   }
 });
 
-test('strict production CSP does not depend on inline styles', async () => {
+test('strict production CSP does not depend on inline assets', async () => {
   const indexHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const vercelConfig = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
   const metaCsp = indexHtml.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)"/)?.[1];
   const allHeaders = vercelConfig.headers.flatMap((entry) => entry.headers);
   const cspHeader = allHeaders.find((header) => header.key === 'Content-Security-Policy');
-  const inlineScript = indexHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1];
-  const inlineScriptHash = createHash('sha256').update(inlineScript || '').digest('base64');
 
   assert.ok(cspHeader, 'Expected vercel.json to define Content-Security-Policy');
   assert.equal(cspHeader.value, metaCsp, 'Vercel CSP header and HTML CSP meta must stay in sync');
+  assert.match(indexHtml, /<script src="\/theme-bootstrap\.js"><\/script>/, 'theme bootstrap must be an external script');
   assert.doesNotMatch(indexHtml, /<style[\s>]/i, 'index.html must not include inline style blocks');
+  assert.doesNotMatch(indexHtml, /<script>([\s\S]*?)<\/script>/i, 'index.html must not include inline script blocks');
   assert.doesNotMatch(indexHtml, /\sstyle=/i, 'index.html must not include inline style attributes');
   assert.doesNotMatch(cspHeader.value, /style-src[^;]*(?:'unsafe-inline'|'sha256-)/, 'style-src must not allow or hash inline styles');
-  assert.ok(cspHeader.value.includes(`'sha256-${inlineScriptHash}'`), 'script-src must hash the inline theme bootstrap');
+  assert.doesNotMatch(cspHeader.value, /script-src[^;]*(?:'unsafe-inline'|'sha256-)/, 'script-src must not allow or hash inline scripts');
 });
 
 

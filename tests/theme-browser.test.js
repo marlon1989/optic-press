@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
-import { access, mkdtemp, rm } from 'node:fs/promises';
+import { access, mkdtemp, open, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,7 @@ import test from 'node:test';
 const execFileAsync = promisify(execFile);
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const browserLockPath = join(tmpdir(), 'opticpress-browser-smoke.lock');
 
 test('theme selector works in a real browser', { timeout: 120000 }, async (t) => {
   if (process.platform !== 'win32') {
@@ -28,6 +29,7 @@ test('theme selector works in a real browser', { timeout: 120000 }, async (t) =>
   const debugPort = 9500 + (process.pid % 400);
   const workspace = await mkdtemp(join(tmpdir(), 'opticpress-theme-'));
   const distRoot = join(workspace, 'dist');
+  const browserLock = await acquireBrowserLock();
   await execFileAsync(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--outDir', distRoot], {
     cwd: projectRoot,
     timeout: 120000,
@@ -120,9 +122,30 @@ test('theme selector works in a real browser', { timeout: 120000 }, async (t) =>
     } catch {}
     browser?.kill();
     server.kill();
+    await releaseBrowserLock(browserLock);
     await rm(workspace, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 });
   }
 });
+
+async function acquireBrowserLock() {
+  const startTime = Date.now();
+  while (Date.now() - startTime < 120000) {
+    try {
+      const handle = await open(browserLockPath, 'wx');
+      await handle.writeFile(String(process.pid));
+      return handle;
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  throw new Error('Timed out waiting for browser smoke lock');
+}
+
+async function releaseBrowserLock(handle) {
+  await handle.close();
+  await rm(browserLockPath, { force: true });
+}
 
 /** @param {CdpSession} cdp */
 async function readThemeState(cdp) {
