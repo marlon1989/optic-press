@@ -10,8 +10,15 @@ import test from 'node:test';
 const execFileAsync = promisify(execFile);
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const commonViewports = [
+  { name: 'mobile-small', width: 360, height: 640 },
+  { name: 'mobile-modern', width: 390, height: 844 },
+  { name: 'tablet', width: 768, height: 1024 },
+  { name: 'laptop', width: 1366, height: 768 },
+  { name: 'desktop', width: 1920, height: 1080 },
+];
 
-test('production build opens dist/index.html in a real browser', { timeout: 120000 }, async (t) => {
+test('production build opens dist/index.html in common browser viewports', { timeout: 180000 }, async (t) => {
   if (process.platform !== 'win32') {
     t.skip('Edge smoke is only configured for the local Windows browser environment');
     return;
@@ -35,34 +42,40 @@ test('production build opens dist/index.html in a real browser', { timeout: 1200
   });
 
   const workspace = await mkdtemp(join(tmpdir(), 'opticpress-smoke-'));
-  const screenshotPath = join(workspace, 'production-smoke.png');
-  const userDataDir = join(workspace, 'edge-profile');
 
   try {
     await waitForServer(server);
     const pageUrl = `http://127.0.0.1:${port}/index.html`;
 
-    await execFileAsync(edgePath, [
-      '--headless=new',
-      '--disable-gpu',
-      '--disable-gpu-compositing',
-      '--disable-dev-shm-usage',
-      '--disable-features=VizDisplayCompositor',
-      '--no-sandbox',
-      '--no-first-run',
-      '--no-default-browser-check',
-      '--run-all-compositor-stages-before-draw',
-      `--user-data-dir=${userDataDir}`,
-      '--window-size=827,781',
-      `--screenshot=${screenshotPath}`,
-      pageUrl,
-    ], {
-      cwd: projectRoot,
-      timeout: 60000,
-    });
+    for (const viewport of commonViewports) {
+      const screenshotPath = join(workspace, `${viewport.name}.png`);
+      const userDataDir = join(workspace, `edge-profile-${viewport.name}`);
 
-    const screenshot = await stat(screenshotPath);
-    assert.ok(screenshot.size > 1000, 'Expected browser to render a non-empty production screenshot');
+      await execFileAsync(edgePath, [
+        '--headless=new',
+        '--disable-gpu',
+        '--disable-gpu-compositing',
+        '--disable-dev-shm-usage',
+        '--disable-features=VizDisplayCompositor',
+        '--no-sandbox',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--run-all-compositor-stages-before-draw',
+        `--user-data-dir=${userDataDir}`,
+        `--window-size=${viewport.width},${viewport.height}`,
+        `--screenshot=${screenshotPath}`,
+        pageUrl,
+      ], {
+        cwd: projectRoot,
+        timeout: 60000,
+      });
+
+      const screenshot = await stat(screenshotPath);
+      assert.ok(
+        screenshot.size > 1000,
+        `Expected browser to render a non-empty production screenshot for ${viewport.name}`,
+      );
+    }
   } finally {
     server.kill();
     await rm(workspace, { recursive: true, force: true });
