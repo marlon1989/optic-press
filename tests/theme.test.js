@@ -17,6 +17,15 @@ test('Theme manager dependencies are present in HTML', async () => {
   assert.match(indexHtml, /data-theme="system"/, 'System theme option must exist');
 });
 
+test('Footer year has a current fallback and dynamic updater', async () => {
+  const indexHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const themeJs = await readFile(new URL('../src/js/ui/theme.js', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(indexHtml, /&copy;\s*2024\b/, 'Footer must not be pinned to 2024');
+  assert.match(indexHtml, /id="current-year">2026<\/span>/, 'Footer fallback year must be current for static rendering');
+  assert.match(themeJs, /new Date\(\)\.getFullYear\(\)/, 'Footer year must be updated from the runtime date');
+});
+
 test('Theme manager handles multiple instantiations safely', async () => {
   const themeJs = await readFile(new URL('../src/js/ui/theme.js', import.meta.url), 'utf8');
   

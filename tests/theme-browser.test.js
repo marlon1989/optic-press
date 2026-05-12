@@ -72,6 +72,7 @@ test('theme selector works in a real browser', { timeout: 120000 }, async (t) =>
       htmlDark: false,
       activeIcon: 'theme-icon-monitor',
       activeCheck: 'system',
+      footerYear: String(new Date().getFullYear()),
     });
 
     await mouseClick(cdp, '#theme-menu-button');
@@ -89,6 +90,7 @@ test('theme selector works in a real browser', { timeout: 120000 }, async (t) =>
       htmlDark: true,
       activeIcon: 'theme-icon-dark',
       activeCheck: 'dark',
+      footerYear: String(new Date().getFullYear()),
     });
 
     await mouseClick(cdp, '#theme-menu-button');
@@ -103,6 +105,7 @@ test('theme selector works in a real browser', { timeout: 120000 }, async (t) =>
       htmlDark: false,
       activeIcon: 'theme-icon-light',
       activeCheck: 'light',
+      footerYear: String(new Date().getFullYear()),
     });
 
     await mouseClick(cdp, '#theme-menu-button');
@@ -164,6 +167,7 @@ async function readThemeState(cdp) {
       htmlDark: document.documentElement.classList.contains('dark'),
       activeIcon,
       activeCheck,
+      footerYear: document.querySelector('#current-year')?.textContent,
     };
   })()`);
 }
