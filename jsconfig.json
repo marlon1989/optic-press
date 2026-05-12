@@ -2,14 +2,10 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "checkJs": true,
     "allowJs": true,
-    "strict": true,
-    "baseUrl": "./",
-    "paths": {
-      "*": ["src/*"]
-    }
+    "strict": true
   },
   "include": [
     "src/**/*.js",
