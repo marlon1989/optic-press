@@ -55,10 +55,11 @@ test('theme selector works in a real browser', { timeout: 120000 }, async (t) =>
       `http://127.0.0.1:${serverPort}/index.html`,
     ], { stdio: ['ignore', 'ignore', 'ignore'] });
 
-    const page = await waitForDebugPage(debugPort);
+    const page = await waitForDebugPage(debugPort, String(serverPort));
     cdp = await createCdpSession(page.webSocketDebuggerUrl);
     await cdp.send('Runtime.enable');
     await waitForReady(cdp);
+    await waitForThemeReady(cdp);
 
     assert.deepEqual(await readThemeState(cdp), {
       expanded: 'false',
@@ -69,11 +70,13 @@ test('theme selector works in a real browser', { timeout: 120000 }, async (t) =>
       activeCheck: 'system',
     });
 
-    await click(cdp, '#theme-menu-button');
+    await mouseClick(cdp, '#theme-menu-button');
     assert.equal((await readThemeState(cdp)).expanded, 'true');
     assert.equal((await readThemeState(cdp)).dropdownHidden, false);
+    assert.equal(await hitTest(cdp, '[data-theme="dark"]'), true);
+    assert.equal(await hitTest(cdp, '[data-theme="system"]'), true);
 
-    await click(cdp, '[data-theme="dark"]');
+    await mouseClick(cdp, '[data-theme="dark"]');
     await wait(cdp, 250);
     assert.deepEqual(await readThemeState(cdp), {
       expanded: 'false',
@@ -84,8 +87,10 @@ test('theme selector works in a real browser', { timeout: 120000 }, async (t) =>
       activeCheck: 'dark',
     });
 
-    await click(cdp, '#theme-menu-button');
-    await click(cdp, '[data-theme="light"]');
+    await mouseClick(cdp, '#theme-menu-button');
+    assert.equal(await hitTest(cdp, '[data-theme="light"]'), true);
+    assert.equal(await hitTest(cdp, '[data-theme="dark"]'), true);
+    await mouseClick(cdp, '[data-theme="light"]');
     await wait(cdp, 250);
     assert.deepEqual(await readThemeState(cdp), {
       expanded: 'false',
@@ -96,13 +101,14 @@ test('theme selector works in a real browser', { timeout: 120000 }, async (t) =>
       activeCheck: 'light',
     });
 
-    await click(cdp, '#theme-menu-button');
-    await click(cdp, 'body');
+    await mouseClick(cdp, '#theme-menu-button');
+    await mouseClick(cdp, 'main');
     await wait(cdp, 250);
     assert.equal((await readThemeState(cdp)).dropdownHidden, true);
 
-    await click(cdp, '#theme-menu-button');
-    await click(cdp, '[data-theme="system"]');
+    await mouseClick(cdp, '#theme-menu-button');
+    assert.equal(await hitTest(cdp, '[data-theme="system"]'), true);
+    await mouseClick(cdp, '[data-theme="system"]');
     await wait(cdp, 250);
     assert.equal((await readThemeState(cdp)).storedTheme, 'system');
     assert.equal((await readThemeState(cdp)).activeIcon, 'theme-icon-monitor');
@@ -141,8 +147,49 @@ async function readThemeState(cdp) {
  * @param {CdpSession} cdp
  * @param {string} selector
  */
-async function click(cdp, selector) {
-  await evaluate(cdp, `document.querySelector(${JSON.stringify(selector)}).click()`);
+async function mouseClick(cdp, selector) {
+  const point = await elementCenter(cdp, selector);
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mousePressed',
+    x: point.x,
+    y: point.y,
+    button: 'left',
+    clickCount: 1,
+  });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
+    x: point.x,
+    y: point.y,
+    button: 'left',
+    clickCount: 1,
+  });
+}
+
+/**
+ * @param {CdpSession} cdp
+ * @param {string} selector
+ */
+function elementCenter(cdp, selector) {
+  return evaluate(cdp, `(() => {
+    const element = document.querySelector(${JSON.stringify(selector)});
+    if (!element) throw new Error('Missing selector: ${selector}');
+    const rect = element.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  })()`);
+}
+
+/**
+ * @param {CdpSession} cdp
+ * @param {string} selector
+ */
+function hitTest(cdp, selector) {
+  return evaluate(cdp, `(() => {
+    const element = document.querySelector(${JSON.stringify(selector)});
+    if (!element) return false;
+    const rect = element.getBoundingClientRect();
+    const target = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return target === element || Boolean(target?.closest(${JSON.stringify(selector)}));
+  })()`);
 }
 
 /** @param {CdpSession} cdp */
@@ -152,6 +199,22 @@ async function waitForReady(cdp) {
     await wait(cdp, 100);
   }
   throw new Error('Timed out waiting for page readiness');
+}
+
+/** @param {CdpSession} cdp */
+async function waitForThemeReady(cdp) {
+  for (let i = 0; i < 80; i++) {
+    const isReady = await evaluate(cdp, `(() => {
+      const button = document.querySelector('#theme-menu-button');
+      const dropdown = document.querySelector('#theme-dropdown');
+      const options = document.querySelectorAll('[data-theme]');
+      const checks = document.querySelectorAll('[data-check]');
+      return Boolean(button && dropdown && options.length === 3 && checks.length === 3);
+    })()`);
+    if (isReady) return;
+    await wait(cdp, 100);
+  }
+  throw new Error('Timed out waiting for theme selector readiness');
 }
 
 /**
@@ -173,18 +236,26 @@ async function evaluate(cdp, expression) {
     returnByValue: true,
   });
   if (result.exceptionDetails) {
-    throw new Error(result.exceptionDetails.text || 'Browser evaluation failed');
+    const details = result.exceptionDetails.exception?.description || result.exceptionDetails.text;
+    throw new Error(details || 'Browser evaluation failed');
   }
   return result.result.value;
 }
 
-/** @param {number} port */
-async function waitForDebugPage(port) {
+/**
+ * @param {number} port
+ * @param {string} appPort
+ */
+async function waitForDebugPage(port, appPort) {
   for (let i = 0; i < 80; i++) {
     try {
       const response = await fetch(`http://127.0.0.1:${port}/json/list`);
       const pages = await response.json();
-      const page = pages.find((entry) => entry.type === 'page' && entry.webSocketDebuggerUrl);
+      const page = pages.find((entry) => (
+        entry.type === 'page'
+        && entry.webSocketDebuggerUrl
+        && String(entry.url).includes(`:${appPort}/index.html`)
+      ));
       if (page) return page;
     } catch {}
     await new Promise((resolve) => setTimeout(resolve, 100));
