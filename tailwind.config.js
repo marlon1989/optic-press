@@ -8,6 +8,9 @@ export default {
   theme: {
     extend: {
       colors: {
+        "accent": "rgb(var(--accent-rgb) / <alpha-value>)",
+        "card-border": "rgb(var(--card-border-rgb) / <alpha-value>)",
+        "fg": "rgb(var(--fg-rgb) / <alpha-value>)",
         "on-primary": "var(--on-primary)",
         "tertiary-fixed-dim": "#cbc9e9",
         "surface-bright": "#f8f9fa",

@@ -27,12 +27,12 @@ test('initial layout-only sections stay hidden until JavaScript shows them', asy
 
   assert.match(
     indexHtml,
-    /<section[^>]*class="[^"]*\bhidden\b[^"]*"[^>]*id="active-compression-section"/,
+    /<(?:section|div)[^>]*id="active-compression-section"[^>]*class="[^"]*\bhidden\b[^"]*"/,
     'active compression section must start hidden',
   );
   assert.match(
     indexHtml,
-    /<section[^>]*class="[^"]*\bhidden\b[^"]*"[^>]*id="completed-compression-section"/,
+    /<(?:section|div)[^>]*id="completed-compression-section"[^>]*class="[^"]*\bhidden\b[^"]*"/,
     'completed compression section must start hidden',
   );
   assert.match(

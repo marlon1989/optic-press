@@ -1,26 +1,20 @@
 <!DOCTYPE html>
-
-<html class="light" lang="en">
+<html lang="en">
 
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-  <title>OpticPress | Professional Image Compression</title>
+  <title>lume. | Instant Lightness</title>
   
-  <!-- Content Security Policy: Dev-compatible policy ('unsafe-inline' required for Vite HMR). -->
-  <!-- Production hardening (sha256 hash) is enforced via HTTP header in vercel.json, -->
-  <!-- which supersedes this meta tag and is served only in production. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+MsWaedGoZ1ZMpXkkbKcxRb6A+lCcE/rtItCqzBloKY=' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; worker-src 'self' blob: data:; child-src 'self' blob:; connect-src 'self' https://vitals.vercel-insights.com; object-src 'none'; base-uri 'self';" />
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="stylesheet" href="/src/styles/input.css" />
   
-  <!-- Critical Script: Inline Theme Initialization -->
   <script>
     (function() {
       const opticTheme = localStorage.getItem('optic_theme') || 'system';
@@ -30,155 +24,188 @@
     })();
   </script>
   
-  
   <style>
     :root {
-      --background: #F8FAFC;
-      --surface: #FFFFFF;
-      --on-surface: #0F172A;
-      --primary: #0891B2;
-      --primary-dim: #0E7490;
-      --primary-container: #CFFAFE;
+      --bg: #fafafa;
+      --fg: #18181b;
+      --fg-rgb: 24 24 27;
+      --accent: #f59e0b;
+      --accent-rgb: 245 158 11;
+      --card-bg: rgba(255, 255, 255, 0.7);
+      --card-border: rgba(0, 0, 0, 0.05);
+      --card-border-rgb: 0 0 0;
+      --aura-opacity: 0.15;
     }
     .dark {
-      --background: #020617;
-      --surface: #0F172A;
-      --on-surface: #F8FAFC;
-      --primary: #22D3EE;
-      --primary-dim: #06B6D4;
-      --primary-container: #164E63;
+      --bg: #09090b;
+      --fg: #fafafa;
+      --fg-rgb: 250 250 250;
+      --accent: #fbbf24;
+      --accent-rgb: 251 191 36;
+      --card-bg: rgba(24, 24, 27, 0.6);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-rgb: 255 255 255;
+      --aura-opacity: 0.3;
     }
+
     body {
-      background-color: var(--background);
-      color: var(--on-surface);
-      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--fg);
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
       margin: 0;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
-    .bg-surface { background-color: var(--surface); }
-    .text-primary { color: var(--primary); }
+
+    /* Emil's Aura Background */
+    .aura {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at 50% -20%, var(--accent), transparent 70%);
+      opacity: var(--aura-opacity);
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity 1s ease;
+    }
+
+    /* Premium Glassmorphism Card */
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    /* Animations */
+    .reveal {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 800ms cubic-bezier(0.23, 1, 0.32, 1), transform 800ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    @starting-style {
+      .reveal {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+    }
+    .reveal-delay { transition-delay: 150ms; }
+
+    /* Custom Transitions */
+    .smooth-transition {
+      transition: color 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                  background-color 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                  border-color 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                  box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                  opacity 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                  transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    /* Interactive Elements */
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      transition: filter 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                  box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                  transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .btn-primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+    .btn-primary:active {
+      transform: translateY(0) scale(0.97);
+    }
   </style>
   
   <script type="module" src="/src/js/main.js"></script>
 </head>
 
-<body class="bg-surface text-on-surface selection:bg-primary-fixed">
-  <!-- TopNavBar -->
-  <nav
-    class="bg-slate-50 dark:bg-slate-900 w-full border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm dark:shadow-none sticky top-0 z-50">
-    <div class="flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 py-3 sm:py-4 max-w-7xl mx-auto border-b-2 border-primary/10">
-      <a href="/"
-        class="text-xl font-bold tracking-tight text-primary hover:text-primary-dim transition-none min-h-[44px] flex items-center">OpticPress</a>
+<body class="selection:bg-accent/30">
+  <div class="aura"></div>
 
-      <div class="flex items-center">
-        <div class="relative group" id="theme-selector">
-          <!-- SVG-First: Inline SVGs replace Material Symbols font icons for this header element. -->
-          <!-- This guarantees zero visual jump (FOUC) since there is no font to load. -->
-          <button class="w-11 h-11 flex items-center justify-center text-on-surface cursor-pointer border-2 border-transparent hover:border-primary hover:bg-primary/5 transition-none rounded-sm" id="theme-menu-button" aria-label="Toggle theme menu">
-            <!-- Default: System/Monitor icon -->
-            <svg id="theme-icon-monitor" xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 0 24 24" width="22" fill="currentColor"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h18v10z"/></svg>
-            <svg id="theme-icon-light" xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor" class="hidden"><path d="M480-360q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM200-440H40v-80h160v80Zm720 0H760v-80h160v80ZM440-760v-160h80v160h-80Zm0 720v-160h80v160h-80ZM256-650l-101-97 57-57 96 100-52 54Zm492 496-97-101 53-53 101 97-57 57Zm-98-550 97-101 57 57-100 96-54-52ZM154-212l101-97 53 53-97 101-57-57Z"/></svg>
-            <svg id="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor" class="hidden"><path d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q14 0 27.5 1t26.5 3q-41 29-65.5 75.5T444-660q0 90 63 153t153 63q55 0 101-24.5t75-65.5q2 13 3 26.5t1 27.5q0 150-105 255T480-120Z"/></svg>
-          </button>
-          <div class="absolute right-0 mt-3 w-40 bg-surface-container-highest border-2 border-primary z-[100] hidden shadow-none rounded-none" id="theme-dropdown">
-            <button class="flex items-center justify-between px-4 py-3 min-h-[44px] hover:bg-primary/10 transition-none border-b-2 border-primary/10 text-sm font-bold text-on-surface w-full" data-theme="light">
-              <div class="flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M480-360q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM200-440H40v-80h160v80Zm720 0H760v-80h160v80ZM440-760v-160h80v160h-80Zm0 720v-160h80v160h-80ZM256-650l-101-97 57-57 96 100-52 54Zm492 496-97-101 53-53 101 97-57 57Zm-98-550 97-101 57 57-100 96-54-52ZM154-212l101-97 53 53-97 101-57-57Z"/></svg>
-                <span>Light</span>
-              </div>
-              <span class="material-symbols-outlined text-sm hidden" data-check>check</span>
-            </button>
-            <button class="flex items-center justify-between px-4 py-3 min-h-[44px] hover:bg-primary/10 transition-none border-b-2 border-primary/10 text-sm font-bold text-on-surface w-full" data-theme="dark">
-              <div class="flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q14 0 27.5 1t26.5 3q-41 29-65.5 75.5T444-660q0 90 63 153t153 63q55 0 101-24.5t75-65.5q2 13 3 26.5t1 27.5q0 150-105 255T480-120Z"/></svg>
-                <span>Dark</span>
-              </div>
-              <span class="material-symbols-outlined text-sm hidden" data-check>check</span>
-            </button>
-            <button class="flex items-center justify-between px-4 py-3 min-h-[44px] hover:bg-primary/10 transition-none text-sm font-bold text-on-surface w-full" data-theme="system">
-              <div class="flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="currentColor"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h18v10z"/></svg>
-                <span>System</span>
-              </div>
-              <span class="material-symbols-outlined text-sm hidden" data-check>check</span>
-            </button>
-          </div>
-        </div>
+  <!-- Minimal Header -->
+  <nav class="relative z-10 flex items-center justify-between px-6 py-6 max-w-7xl mx-auto w-full reveal">
+    <a href="/" class="text-2xl font-bold tracking-tighter smooth-transition hover:opacity-70">lume.</a>
+    
+    <div class="relative group" id="theme-selector">
+      <button class="w-10 h-10 flex items-center justify-center rounded-full border border-card-border glass-card smooth-transition active:scale-95" id="theme-menu-button" type="button" aria-label="Toggle theme menu" aria-expanded="false" aria-controls="theme-dropdown">
+        <svg id="theme-icon-monitor" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        <svg id="theme-icon-light" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707-.707"/></svg>
+        <svg id="theme-icon-dark" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+      </button>
+      
+      <div class="absolute right-0 mt-2 w-40 glass-card rounded-2xl border border-card-border hidden overflow-hidden z-50 origin-top-right transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] opacity-0 scale-95" id="theme-dropdown" aria-hidden="true">
+        <button class="w-full px-4 py-3 text-left text-sm hover:bg-accent/10 smooth-transition flex items-center justify-between group" type="button" data-theme="light">
+          <span>Light</span>
+          <svg class="w-4 h-4 text-accent hidden" data-check fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+        <button class="w-full px-4 py-3 text-left text-sm hover:bg-accent/10 smooth-transition flex items-center justify-between group" type="button" data-theme="dark">
+          <span>Dark</span>
+          <svg class="w-4 h-4 text-accent hidden" data-check fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+        <button class="w-full px-4 py-3 text-left text-sm hover:bg-accent/10 smooth-transition flex items-center justify-between group" type="button" data-theme="system">
+          <span>System</span>
+          <svg class="w-4 h-4 text-accent hidden" data-check fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
       </div>
     </div>
   </nav>
-  <main class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:pt-14 sm:pb-16 overflow-hidden">
-    <!-- Hero & Branding Section -->
-    <header class="mb-8 sm:mb-16 lg:mb-24 text-center">
-      <h1 class="mx-auto max-w-[12ch] sm:max-w-4xl text-3xl sm:text-5xl md:text-[3.5rem] font-extrabold leading-tight tracking-tight text-on-surface mb-5 sm:mb-6 break-words">
-        Crystal Clear <span
-          class="bg-gradient-to-r from-primary to-primary-dim bg-clip-text text-transparent">Image</span>
-        Compression
+
+  <!-- Main Stage -->
+  <main class="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12">
+    <div class="w-full max-w-xl text-center mb-10 reveal-delay reveal">
+      <h1 class="text-5xl sm:text-7xl font-bold tracking-tighter mb-4 leading-[0.9]">
+        Instant visual <br/>
+        <span class="text-accent italic">lightness.</span>
       </h1>
-      <p class="text-on-surface-variant max-w-[16.5rem] sm:max-w-2xl mx-auto text-sm sm:text-base md:text-lg px-1 sm:px-0 font-medium leading-relaxed">
-        Make your images load instantly without losing quality. <br class="hidden sm:block"/> Fast, private, and works right in your browser.
+      <p class="text-fg/60 text-lg font-medium tracking-tight">
+        Private, browser-level image optimization.
       </p>
-    </header>
-    <!-- Drop Zone Section -->
-    <section class="mb-12 sm:mb-20 lg:mb-24">
-      <div class="w-full max-w-[calc(100vw-2rem)] mx-auto bg-surface-container-low rounded-xl p-1 shadow-sm">
-        <div id="drop-zone"
-          class="w-full max-w-full border-2 border-dashed border-outline-variant/30 rounded-lg bg-surface-container-lowest flex flex-col items-center justify-center min-h-[15rem] sm:min-h-[22rem] md:min-h-[24rem] py-8 sm:py-16 md:py-20 px-4 sm:px-6 overflow-hidden transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-surface-bright hover:shadow-2xl hover:shadow-primary/10 group cursor-pointer">
-          <div
-            class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary-container flex items-center justify-center mb-5 sm:mb-6 group-hover:scale-105 transition-transform duration-[160ms] ease-[cubic-bezier(0.23,1,0.32,1)] text-on-primary-container">
-            <svg xmlns="http://www.w3.org/2000/svg" height="32" viewBox="0 0 24 24" width="32" fill="currentColor">
-              <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
-            </svg>
-          </div>
-          <h2 class="text-xl sm:text-2xl font-bold text-on-surface mb-2 text-center">Drop your photos here</h2>
-          <p class="text-on-surface-variant font-medium tracking-wide mb-6 sm:mb-8 text-center text-sm max-w-[18rem] sm:max-w-none leading-relaxed">Supports WEBP, PNG, JPEG, AVIF and NEF
-            up to 50MB</p>
-          <button id="select-files-btn"
-            class="bg-primary text-on-primary px-6 py-3 sm:px-8 min-h-[44px] rounded-full text-base sm:text-lg font-bold transition-[background-color,box-shadow,transform] duration-[160ms] ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-primary-dim active:scale-[0.97] shadow-sm hover:shadow-md">
-            Select Files
-          </button>
+    </div>
+
+    <!-- The Stage: Dropzone -->
+    <div class="w-full max-w-2xl reveal-delay reveal">
+      <div id="drop-zone" class="glass-card rounded-[32px] p-8 sm:p-16 flex flex-col items-center justify-center min-h-[320px] border-2 border-dashed border-accent/20 group cursor-pointer smooth-transition hover:border-accent/50 hover:shadow-2xl hover:shadow-accent/5">
+        <div class="w-20 h-20 rounded-3xl bg-accent/10 flex items-center justify-center mb-8 group-hover:scale-110 smooth-transition">
+          <svg class="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
         </div>
-        <input type="file" id="file-input" class="hidden" accept="image/webp,image/png,image/jpeg,image/avif,.nef,image/x-nikon-nef" multiple
-          aria-hidden="true" />
+        <h2 class="text-2xl font-bold tracking-tight mb-2">Drop your photos</h2>
+        <p class="text-fg/40 font-medium text-sm mb-8">WEBP, PNG, JPEG, AVIF up to 50MB</p>
+        
+        <button id="select-files-btn" class="btn-primary px-8 py-3 rounded-full font-bold text-sm">
+          Select Files
+        </button>
+        <input type="file" id="file-input" class="hidden" accept="image/*" multiple />
       </div>
-    </section>
-    <!-- Active Compression State -->
-    <section class="mb-16 sm:mb-24 hidden scroll-mt-24" id="active-compression-section">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-        <div>
-          <h3 class="text-xl sm:text-2xl font-bold text-on-surface">Compressing...</h3>
-          <p class="text-on-surface-variant text-sm sm:text-base font-medium" id="active-compression-count">Preparing your images</p>
+
+      <!-- Active State (Hidden by default) -->
+      <div id="active-compression-section" class="hidden mt-8 space-y-4">
+        <div class="flex items-center justify-between mb-4 px-2">
+          <h3 class="font-bold tracking-tight">Optimizing...</h3>
+          <span class="text-xs font-black uppercase tracking-widest text-accent animate-pulse" id="active-compression-count">Processing</span>
         </div>
-        <div
-          class="flex items-center space-x-2 bg-secondary-container text-on-secondary-container px-4 py-2 min-h-[44px] rounded-full font-medium text-sm">
-          <span class="material-symbols-outlined text-sm animate-spin icon-outline" data-icon="sync">sync</span>
-          <span>Optimizing...</span>
-        </div>
+        <div id="active-jobs-list" class="space-y-3"></div>
       </div>
-      <div class="space-y-4" id="active-jobs-list">
-        <!-- Active jobs injected via JS -->
-      </div>
-    </section>
-    <!-- Completed Results Section (Bento Grid Style) -->
-    <section class="mb-16 sm:mb-24 hidden scroll-mt-24" id="completed-compression-section">
-      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-        <div>
-          <h3 class="text-xl sm:text-2xl font-bold text-on-surface">All done!</h3>
-          <p class="text-on-surface-variant text-sm sm:text-base font-medium" id="completed-compression-stats">Your images are ready</p>
-        </div>
-        <button id="download-all-btn"
-          class="bg-tertiary text-on-tertiary px-6 py-3 sm:px-10 sm:py-4 min-h-[44px] rounded-full text-base sm:text-lg font-bold flex items-center justify-center space-x-3 transition-colors hover:bg-tertiary-dim shadow-sm hover:shadow-md w-full md:w-auto">
-          <span class="material-symbols-outlined" data-icon="download">download</span>
-          <span id="download-btn-text">Download All (0 KB)</span>
+
+      <!-- Result State (Hidden by default) -->
+      <div id="completed-compression-section" class="hidden mt-8 text-center">
+        <button id="download-all-btn" class="btn-primary w-full py-4 rounded-2xl font-bold flex items-center justify-center space-x-2">
+          <span>Download All</span>
+          <span id="download-btn-text" class="opacity-70 text-xs">(0 KB)</span>
         </button>
       </div>
-    </section>
-  </main>
-  <!-- Footer -->
-  <footer class="bg-slate-50 dark:bg-slate-950 w-full border-t border-slate-200 dark:border-slate-800 mt-20">
-    <div
-      class="flex flex-col items-center px-8 py-12 max-w-7xl mx-auto space-y-4">
-      <div class="text-sm font-medium text-slate-500 dark:text-slate-400 text-center">© <span id="current-year">2024</span> OpticPress Imaging. All rights reserved.</div>
     </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="relative z-10 px-6 py-8 text-center reveal">
+    <p class="text-[10px] font-black uppercase tracking-[0.2em] text-fg/20">
+      &copy; 2024 lume studio &bull; local processing
+    </p>
   </footer>
 </body>
 

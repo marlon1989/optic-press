@@ -17,6 +17,8 @@ class OpticThemeManager {
     /** @type {NodeListOf<HTMLElement> | Array<HTMLElement>} */
     // @ts-ignore
     this.options = this.dropdown ? this.dropdown.querySelectorAll('[data-theme]') : [];
+    /** @type {number | null} */
+    this.closeTimer = null;
     
     this.init();
   }
@@ -26,7 +28,8 @@ class OpticThemeManager {
 
     // Real-time listener for OS theme changes
     this.mediaQuery.addEventListener('change', () => {
-       if (localStorage.getItem(this.STORAGE_KEY) === 'system') {
+       const storedTheme = localStorage.getItem(this.STORAGE_KEY);
+       if (!storedTheme || storedTheme === 'system') {
            this.applyCurrentState();
        }
     });
@@ -41,7 +44,8 @@ class OpticThemeManager {
 
     // Handle selection
     this.options.forEach(opt => {
-      opt.addEventListener('click', () => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
         this.setTheme(opt.dataset.theme || 'system');
         this.closeDropdown();
       });
@@ -55,8 +59,14 @@ class OpticThemeManager {
     if (!this.dropdown) return;
     const isHidden = this.dropdown.classList.contains('hidden');
     if (isHidden) {
-      this.dropdown.classList.add('flex', 'flex-col');
+      this.clearCloseTimer();
       this.dropdown.classList.remove('hidden');
+      this.dropdown.setAttribute('aria-hidden', 'false');
+      this.menuButton?.setAttribute('aria-expanded', 'true');
+      // Force reflow for animation
+      this.dropdown.offsetHeight;
+      this.dropdown.classList.remove('opacity-0', 'scale-95');
+      this.dropdown.classList.add('opacity-100', 'scale-100');
     } else {
       this.closeDropdown();
     }
@@ -64,8 +74,25 @@ class OpticThemeManager {
 
   closeDropdown() {
     if (this.dropdown) {
-      this.dropdown.classList.remove('flex', 'flex-col');
-      this.dropdown.classList.add('hidden');
+      this.dropdown.classList.remove('opacity-100', 'scale-100');
+      this.dropdown.classList.add('opacity-0', 'scale-95');
+      this.dropdown.setAttribute('aria-hidden', 'true');
+      this.menuButton?.setAttribute('aria-expanded', 'false');
+      // Wait for animation to finish before hiding
+      this.clearCloseTimer();
+      this.closeTimer = window.setTimeout(() => {
+        if (this.dropdown?.classList.contains('opacity-0')) {
+          this.dropdown.classList.add('hidden');
+        }
+        this.closeTimer = null;
+      }, 200);
+    }
+  }
+
+  clearCloseTimer() {
+    if (this.closeTimer !== null) {
+      window.clearTimeout(this.closeTimer);
+      this.closeTimer = null;
     }
   }
 
@@ -127,11 +154,20 @@ class OpticThemeManager {
   }
 }
 
-// Bind to DOM when ready
-document.addEventListener('DOMContentLoaded', () => {
+let isThemeInitialized = false;
+
+// Bind to DOM robustly
+function initTheme() {
+  if (isThemeInitialized) return;
+  isThemeInitialized = true;
   new OpticThemeManager();
   
-  // Update current year in footer
   const yearEl = document.getElementById('current-year');
   if (yearEl) yearEl.textContent = String(new Date().getFullYear());
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initTheme);
+} else {
+  initTheme();
+}
