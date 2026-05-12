@@ -38,3 +38,6 @@ SKILL.md
 docs/
 ui_ux_output.md
 skills-lock.json
+
+# Codex Agent Configs
+.codex/skills/**/agents/openai.yaml
