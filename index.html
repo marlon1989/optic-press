@@ -65,7 +65,7 @@
   <!-- TopNavBar -->
   <nav
     class="bg-slate-50 dark:bg-slate-900 w-full border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm dark:shadow-none sticky top-0 z-50">
-    <div class="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4 max-w-7xl mx-auto border-b-2 border-primary/10 mb-8">
+    <div class="flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 py-3 sm:py-4 max-w-7xl mx-auto border-b-2 border-primary/10">
       <a href="/"
         class="text-xl font-bold tracking-tight text-primary hover:text-primary-dim transition-none min-h-[44px] flex items-center">OpticPress</a>
 
@@ -106,34 +106,34 @@
       </div>
     </div>
   </nav>
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+  <main class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:pt-14 sm:pb-16 overflow-hidden">
     <!-- Hero & Branding Section -->
-    <header class="mb-16 sm:mb-24 text-center">
-      <h1 class="text-4xl sm:text-5xl md:text-[3.5rem] font-extrabold leading-tight tracking-tighter text-on-surface mb-6">
+    <header class="mb-8 sm:mb-16 lg:mb-24 text-center">
+      <h1 class="mx-auto max-w-[12ch] sm:max-w-4xl text-3xl sm:text-5xl md:text-[3.5rem] font-extrabold leading-tight tracking-tight text-on-surface mb-5 sm:mb-6 break-words">
         Crystal Clear <span
           class="bg-gradient-to-r from-primary to-primary-dim bg-clip-text text-transparent">Image</span>
         Compression
       </h1>
-      <p class="text-on-surface-variant max-w-2xl mx-auto text-base md:text-lg px-2 sm:px-0 font-medium">
+      <p class="text-on-surface-variant max-w-[16.5rem] sm:max-w-2xl mx-auto text-sm sm:text-base md:text-lg px-1 sm:px-0 font-medium leading-relaxed">
         Make your images load instantly without losing quality. <br class="hidden sm:block"/> Fast, private, and works right in your browser.
       </p>
     </header>
     <!-- Drop Zone Section -->
-    <section class="mb-16 sm:mb-24">
-      <div class="bg-surface-container-low rounded-xl p-1 shadow-sm">
+    <section class="mb-12 sm:mb-20 lg:mb-24">
+      <div class="w-full max-w-[calc(100vw-2rem)] mx-auto bg-surface-container-low rounded-xl p-1 shadow-sm">
         <div id="drop-zone"
-          class="border-2 border-dashed border-outline-variant/30 rounded-lg bg-surface-container-lowest flex flex-col items-center justify-center py-16 md:py-24 px-4 sm:px-6 transition-all duration-500 ease-out hover:bg-surface-bright hover:scale-[1.01] hover:shadow-2xl hover:shadow-primary/10 group cursor-pointer">
+          class="w-full max-w-full border-2 border-dashed border-outline-variant/30 rounded-lg bg-surface-container-lowest flex flex-col items-center justify-center min-h-[15rem] sm:min-h-[22rem] md:min-h-[24rem] py-8 sm:py-16 md:py-20 px-4 sm:px-6 overflow-hidden transition-[background-color,border-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-surface-bright hover:shadow-2xl hover:shadow-primary/10 group cursor-pointer">
           <div
-            class="w-16 h-16 rounded-full bg-primary-container flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-on-primary-container">
+            class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary-container flex items-center justify-center mb-5 sm:mb-6 group-hover:scale-105 transition-transform duration-[160ms] ease-[cubic-bezier(0.23,1,0.32,1)] text-on-primary-container">
             <svg xmlns="http://www.w3.org/2000/svg" height="32" viewBox="0 0 24 24" width="32" fill="currentColor">
               <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
             </svg>
           </div>
           <h2 class="text-xl sm:text-2xl font-bold text-on-surface mb-2 text-center">Drop your photos here</h2>
-          <p class="text-on-surface-variant font-medium tracking-wide mb-8 text-center text-sm">Supports WEBP, PNG, JPEG, AVIF and NEF
+          <p class="text-on-surface-variant font-medium tracking-wide mb-6 sm:mb-8 text-center text-sm max-w-[18rem] sm:max-w-none leading-relaxed">Supports WEBP, PNG, JPEG, AVIF and NEF
             up to 50MB</p>
           <button id="select-files-btn"
-            class="bg-primary text-on-primary px-6 py-3 sm:px-8 min-h-[44px] rounded-full text-base sm:text-lg font-bold transition-colors hover:bg-primary-dim shadow-sm hover:shadow-md">
+            class="bg-primary text-on-primary px-6 py-3 sm:px-8 min-h-[44px] rounded-full text-base sm:text-lg font-bold transition-[background-color,box-shadow,transform] duration-[160ms] ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-primary-dim active:scale-[0.97] shadow-sm hover:shadow-md">
             Select Files
           </button>
         </div>
