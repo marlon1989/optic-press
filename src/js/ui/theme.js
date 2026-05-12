@@ -125,9 +125,7 @@ class OpticThemeManager {
 
   /** @param {string} theme */
   updateUI(theme) {
-    // SVG-First Header: Toggle visibility of pre-rendered SVG icons in the menu button.
-    // We swap which SVG is visible instead of mutating textContent (which required the
-    // Material Symbols font to be loaded before rendering correctly).
+    // Toggle visibility of pre-rendered SVG icons in the menu button.
     if (this.menuButton) {
       /** @type {Record<string, string>} */
       const svgIdMap = { system: 'theme-icon-monitor', dark: 'theme-icon-dark', light: 'theme-icon-light' };

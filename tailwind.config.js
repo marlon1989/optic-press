@@ -1,6 +1,3 @@
-import containerQueries from '@tailwindcss/container-queries';
-import forms from '@tailwindcss/forms';
-
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: "class",
@@ -77,8 +74,5 @@ export default {
       }
     }
   },
-  plugins: [
-    forms,
-    containerQueries
-  ]
+  plugins: []
 }

@@ -53,9 +53,6 @@
   h1, h2, h3, h4, h5, h6, .brand-font {
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
-  .material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-  }
 }
 
 @layer utilities {
@@ -77,16 +74,6 @@
   .result-card.is-selected {
     @apply outline outline-4 outline-primary ring-0 shadow-lg bg-primary-container;
     border-color: transparent;
-  }
-
-  /* CSP-Safe Icon Variant: replaces style="font-variation-settings: 'FILL' 0;"
-     Inline style attributes require 'unsafe-hashes' in style-src; a CSS class does not. */
-  .icon-filled {
-    font-variation-settings: 'FILL' 1;
-  }
-
-  .icon-outline {
-    font-variation-settings: 'FILL' 0;
   }
 
   /* Premium Toast System */
