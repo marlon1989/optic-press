@@ -30,18 +30,19 @@ test('production build opens dist/index.html in common browser viewports', { tim
     return;
   }
 
-  await execFileAsync(process.execPath, ['node_modules/vite/bin/vite.js', 'build'], {
+  const port = 6200 + (process.pid % 1000);
+  const workspace = await mkdtemp(join(tmpdir(), 'opticpress-smoke-'));
+  const distRoot = join(workspace, 'dist');
+
+  await execFileAsync(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--outDir', distRoot], {
     cwd: projectRoot,
     timeout: 120000,
   });
 
-  const port = 6200 + (process.pid % 1000);
-  const server = spawn(process.execPath, ['scripts/static-dist-server.mjs', String(port)], {
+  const server = spawn(process.execPath, ['scripts/static-dist-server.mjs', String(port), distRoot], {
     cwd: projectRoot,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-
-  const workspace = await mkdtemp(join(tmpdir(), 'opticpress-smoke-'));
 
   try {
     await waitForServer(server);

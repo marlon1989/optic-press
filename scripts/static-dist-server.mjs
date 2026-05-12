@@ -3,7 +3,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import { createServer } from 'node:http';
 
 const port = Number(process.argv[2] || 5174);
-const distRoot = resolve('dist');
+const distRoot = resolve(process.argv[3] || 'dist');
 
 const mimeTypes = {
   '.css': 'text/css',

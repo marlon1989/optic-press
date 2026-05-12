@@ -4,6 +4,16 @@
 
 @layer base {
   :root {
+    --bg: #fafafa;
+    --fg: #18181b;
+    --fg-rgb: 24 24 27;
+    --accent: #f59e0b;
+    --accent-rgb: 245 158 11;
+    --card-bg: rgba(255, 255, 255, 0.7);
+    --card-border: rgba(0, 0, 0, 0.05);
+    --card-border-rgb: 0 0 0;
+    --aura-opacity: 0.15;
+
     /* Exported for compressor js toast notifications */
     --error-container: theme('colors.error-container');
     --error: theme('colors.error');
@@ -30,6 +40,16 @@
   }
 
   .dark {
+    --bg: #09090b;
+    --fg: #fafafa;
+    --fg-rgb: 250 250 250;
+    --accent: #fbbf24;
+    --accent-rgb: 251 191 36;
+    --card-bg: rgba(24, 24, 27, 0.6);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-border-rgb: 255 255 255;
+    --aura-opacity: 0.3;
+
     /* Atmospheric Dark Mode Override - Prosumer SaaS Deep Cyan */
     --background: #020617;         /* Deepest slate/navy */
     --surface: #0F172A;            /* Deep slate for cards */
@@ -48,10 +68,81 @@
     --tertiary: #22C55E;
   }
   body {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: var(--bg);
+    color: var(--fg);
+    display: flex;
+    flex-direction: column;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
   }
   h1, h2, h3, h4, h5, h6, .brand-font {
     font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@layer components {
+  .aura {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at 50% -20%, var(--accent), transparent 70%);
+    opacity: var(--aura-opacity);
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 1s ease;
+  }
+
+  .glass-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 800ms cubic-bezier(0.23, 1, 0.32, 1), transform 800ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  @starting-style {
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+  }
+
+  .reveal-delay {
+    transition-delay: 150ms;
+  }
+
+  .smooth-transition {
+    transition: color 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                background-color 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                border-color 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                opacity 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    transition: filter 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1),
+                transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0) scale(0.97);
   }
 }
 

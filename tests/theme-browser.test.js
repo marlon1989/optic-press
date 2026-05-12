@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { access, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import test from 'node:test';
 
+const execFileAsync = promisify(execFile);
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 
@@ -25,13 +27,13 @@ test('theme selector works in a real browser', { timeout: 120000 }, async (t) =>
   const serverPort = 6500 + (process.pid % 1000);
   const debugPort = 9500 + (process.pid % 400);
   const workspace = await mkdtemp(join(tmpdir(), 'opticpress-theme-'));
-  const server = spawn(process.execPath, [
-    'node_modules/vite/bin/vite.js',
-    '--host',
-    '127.0.0.1',
-    '--port',
-    String(serverPort),
-  ], {
+  const distRoot = join(workspace, 'dist');
+  await execFileAsync(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--outDir', distRoot], {
+    cwd: projectRoot,
+    timeout: 120000,
+  });
+
+  const server = spawn(process.execPath, ['scripts/static-dist-server.mjs', String(serverPort), distRoot], {
     cwd: projectRoot,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
