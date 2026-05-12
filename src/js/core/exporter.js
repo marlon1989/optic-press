@@ -54,7 +54,6 @@ export class OpticExporter {
         await this.exportChunk(chunks[index], folderName, index, totalChunks);
       }
       this.showToast(buildCompletionMessage(totalChunks, totalFileCount));
-      this.db.clear().catch(console.error);
     } catch (err) {
       console.error('[Optic Exporter] Batch Download Failed', err);
       this.showToast('Sorry, we failed to generate your ZIP.', 'error');
