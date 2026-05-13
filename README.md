@@ -7,11 +7,13 @@ OpticPress is a private, browser-based image optimizer with a lightweight `lume.
 - Accepts WEBP, PNG, JPEG, AVIF and NEF files up to 50 MB.
 - Processes images client-side; files are not uploaded to an external server.
 - Stores processed blobs temporarily in IndexedDB instead of keeping the whole batch in memory.
+- Keeps processed blobs available after the first download so the same ZIP can be downloaded again.
 - Exports deterministic ZIP files through chunk planning that adapts to the device:
   - 96 MB chunks on mobile browsers.
   - 128 MB chunks on low-memory desktop browsers.
   - 500 MB chunks on standard desktop browsers.
 - Includes a responsive theme selector with light, dark and system modes.
+- Skips Vercel Analytics and Speed Insights on localhost and private-network smoke runs.
 
 ## Stack
 
