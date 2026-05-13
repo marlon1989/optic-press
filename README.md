@@ -10,7 +10,7 @@ OpticPress is a private, browser-based image optimizer with a lightweight `lume.
 - Exports deterministic ZIP files through chunk planning that adapts to the device:
   - 96 MB chunks on mobile browsers.
   - 128 MB chunks on low-memory desktop browsers.
-  - 256 MB chunks on standard desktop browsers.
+  - 500 MB chunks on standard desktop browsers.
 - Includes a responsive theme selector with light, dark and system modes.
 
 ## Stack

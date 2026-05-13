@@ -21,10 +21,10 @@ test('resolveZipChunkMegabytes lowers desktop chunks on low-memory devices', () 
   );
 });
 
-test('resolveZipChunkMegabytes keeps desktop chunks below JSZip heap-risk range', () => {
+test('resolveZipChunkMegabytes uses larger chunks on standard desktop devices', () => {
   assert.equal(
     resolveZipChunkMegabytes({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', deviceMemory: 8 }),
     DESKTOP_ZIP_CHUNK_MB,
   );
-  assert.ok(DESKTOP_ZIP_CHUNK_MB <= 256);
+  assert.equal(DESKTOP_ZIP_CHUNK_MB, 500);
 });

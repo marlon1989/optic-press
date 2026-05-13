@@ -4,7 +4,7 @@ const BYTES_PER_MB = 1024 * 1024;
 
 export const MOBILE_ZIP_CHUNK_MB = 96;
 export const LOW_MEMORY_ZIP_CHUNK_MB = 128;
-export const DESKTOP_ZIP_CHUNK_MB = 256;
+export const DESKTOP_ZIP_CHUNK_MB = 500;
 
 /**
  * @param {{ userAgent?: string, deviceMemory?: number }} environment
